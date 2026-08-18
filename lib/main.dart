@@ -1,5 +1,7 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'core/network/api_client.dart';
+import 'core/services/notification_service.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'core/theme/app_colors.dart';
 import 'features/auth/login_screen.dart';
@@ -12,7 +14,9 @@ const _allowedRoles = {'DRIVER', 'EMT', 'NURSE'};
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   await ApiClient.init();
+  await NotificationService.instance.initialize();
   runApp(const MachakosEocApp());
 }
 
@@ -78,6 +82,7 @@ class _AuthGateState extends State<_AuthGate> {
 
       // Token valid, role OK — persist refreshed user data and proceed.
       await storage.saveUser(user);
+      NotificationService.instance.registerToken();
       _goToMainShell();
     } catch (_) {
       // Token expired / network error — clear and show login.

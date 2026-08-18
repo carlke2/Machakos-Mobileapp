@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:mobileapp/core/network/api_client.dart';
 import 'package:mobileapp/core/network/socket_service.dart';
+import 'package:mobileapp/core/services/notification_service.dart';
 import 'package:mobileapp/core/storage/secure_storage_service.dart';
 import 'package:mobileapp/core/theme/app_colors.dart';
 import 'package:mobileapp/features/auth/login_screen.dart';
@@ -91,6 +92,7 @@ class _CrewScreenState extends State<CrewScreen> {
 
   Future<void> _handleLogout() async {
     SocketService.instance.disconnect();
+    await NotificationService.instance.clearToken();
     await SecureStorageService.instance.clearAll();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(

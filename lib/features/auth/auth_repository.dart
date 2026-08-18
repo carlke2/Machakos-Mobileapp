@@ -1,4 +1,5 @@
 import 'package:mobileapp/core/network/api_client.dart';
+import 'package:mobileapp/core/services/notification_service.dart';
 import 'package:mobileapp/core/storage/secure_storage_service.dart';
 
 const _allowedRoles = {'DRIVER', 'EMT', 'NURSE'};
@@ -52,6 +53,9 @@ class AuthRepository {
       _storage.saveUser(user),
     ]);
 
+    // Register FCM token for push notifications
+    NotificationService.instance.registerToken();
+
     return AuthResult(
       token: token,
       userId: user['id'] as String,
@@ -62,5 +66,8 @@ class AuthRepository {
     );
   }
 
-  Future<void> logout() => _storage.clearAll();
+  Future<void> logout() async {
+    await NotificationService.instance.clearToken();
+    await _storage.clearAll();
+  }
 }
