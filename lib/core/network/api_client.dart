@@ -14,10 +14,9 @@ class ApiException implements Exception {
 }
 
 const List<String> _candidateBaseUrls = [
+  'http://192.168.0.106:3000',   // current LAN IP (physical devices)
+  'http://10.0.2.2:3000',        // Android emulator → host loopback
   'http://127.0.0.1:3000',
-  'http://192.168.100.147:3000',
-  'http://10.166.67.122:3000',
-  'http://10.0.2.2:3000',
   'http://localhost:3000',
 ];
 
