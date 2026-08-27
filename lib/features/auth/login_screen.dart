@@ -181,11 +181,11 @@ class _LogoRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 120, maxHeight: 38),
+          constraints: const BoxConstraints(maxWidth: 140, maxHeight: 46),
           child: Image.asset(
-            'assets/images/logo_partner.png',
+            'assets/images/logo_machakos.jpg',
             fit: BoxFit.contain,
-            semanticLabel: 'Partner Organization',
+            semanticLabel: 'Machakos County',
           ),
         ),
         Container(
@@ -195,11 +195,11 @@ class _LogoRow extends StatelessWidget {
           color: AppColors.border,
         ),
         ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 140, maxHeight: 46),
+          constraints: const BoxConstraints(maxWidth: 120, maxHeight: 38),
           child: Image.asset(
-            'assets/images/logo_machakos.png',
+            'assets/images/logo_partner.png',
             fit: BoxFit.contain,
-            semanticLabel: 'Machakos County',
+            semanticLabel: 'Malteser International',
           ),
         ),
       ],
