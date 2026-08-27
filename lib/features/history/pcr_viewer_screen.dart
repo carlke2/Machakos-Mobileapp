@@ -85,7 +85,7 @@ class _PcrViewerScreenState extends State<PcrViewerScreen> {
   static (Color, Color) _statusColors(String status) {
     switch (status) {
       case 'COMPLETED':
-        return (AppColors.accent, const Color(0xFFD1FAE5));
+        return (AppColors.accent, const Color(0xFFE8EFFD));
       case 'CANCELLED':
         return (AppColors.danger, AppColors.dangerBg);
       default:

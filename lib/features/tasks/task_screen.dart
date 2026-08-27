@@ -240,7 +240,7 @@ class _TaskScreenState extends State<TaskScreen> {
       case 'ACCEPTED':
         return (const Color(0xFF2563EB), const Color(0xFFE8EFFD));
       case 'EN_ROUTE':
-        return (AppColors.primary, const Color(0xFFE8F3ED));
+        return (AppColors.primary, const Color(0xFFE7F0FA));
       case 'AT_SCENE':
         return (AppColors.text, const Color(0xFFEDF2EF));
       case 'PATIENT_PICKED':
@@ -248,7 +248,7 @@ class _TaskScreenState extends State<TaskScreen> {
       case 'AT_HOSPITAL':
         return (const Color(0xFF2563EB), const Color(0xFFE8EFFD));
       case 'COMPLETED':
-        return (AppColors.primary, const Color(0xFFE8F3ED));
+        return (AppColors.primary, const Color(0xFFE7F0FA));
       case 'CANCELLED':
         return (AppColors.danger, AppColors.dangerBg);
       default:

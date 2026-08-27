@@ -115,7 +115,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   static (Color, Color) _statusColors(String status) {
     switch (status) {
       case 'COMPLETED':
-        return (AppColors.primary, const Color(0xFFE8F3ED));
+        return (AppColors.primary, const Color(0xFFE7F0FA));
       case 'CANCELLED':
         return (AppColors.danger, AppColors.dangerBg);
       default:
