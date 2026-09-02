@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobileapp/core/network/api_client.dart';
 import 'package:mobileapp/core/theme/app_colors.dart';
 import 'package:mobileapp/features/home/main_shell.dart';
 import 'auth_repository.dart';
 
-/// Responder login screen.
+enum _Step { phone, code }
+
+/// Responder OTP login screen.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -13,32 +16,88 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _codeController = TextEditingController();
+  final FocusNode _codeFocusNode = FocusNode();
 
-  bool _obscurePassword = true;
+  _Step _step = _Step.phone;
   bool _isSubmitting = false;
+  int _cooldown = 0;
+  Timer? _cooldownTimer;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _phoneController.dispose();
+    _codeController.dispose();
+    _codeFocusNode.dispose();
+    _cooldownTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _handleSignIn() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
+  void _startCooldown([int seconds = 45]) {
+    _cooldownTimer?.cancel();
+    setState(() => _cooldown = seconds);
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_cooldown <= 1) {
+        timer.cancel();
+        if (mounted) setState(() => _cooldown = 0);
+      } else {
+        if (mounted) setState(() => _cooldown -= 1);
+      }
+    });
+  }
 
-    if (email.isEmpty || password.isEmpty) {
-      _showErrorSnackBar('Enter email and password');
+  Future<void> _handleSendCode() async {
+    final phone = _phoneController.text.trim();
+    if (phone.isEmpty) {
+      _showSnackBar('Enter your phone number', isError: true);
       return;
     }
 
     setState(() => _isSubmitting = true);
 
     try {
-      await AuthRepository().login(email, password);
+      final result = await AuthRepository().requestOtp(phone);
+
+      if (!mounted) return;
+      setState(() {
+        _step = _Step.code;
+        _codeController.clear();
+      });
+      _startCooldown(45);
+
+      final mins = (result.expiresInSeconds / 60).round();
+      _showSnackBar(
+        'Code sent — enter the 6-digit code sent to your phone. It expires in $mins minutes.',
+        isError: false,
+      );
+
+      // Auto focus code field
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) _codeFocusNode.requestFocus();
+      });
+    } on ApiException catch (e) {
+      if (mounted) _showSnackBar('Could not send code: ${e.message}', isError: true);
+    } catch (e) {
+      if (mounted) _showSnackBar('Could not send code. Please try again.', isError: true);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _handleVerifyCode() async {
+    final phone = _phoneController.text.trim();
+    final code = _codeController.text.trim();
+
+    if (code.length != 6) {
+      _showSnackBar('Enter the 6-digit code', isError: true);
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await AuthRepository().verifyOtp(phone, code);
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -47,22 +106,22 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } on ApiException catch (e) {
-      if (mounted) _showErrorSnackBar(e.message);
+      if (mounted) _showSnackBar(e.message, isError: true);
     } catch (_) {
-      if (mounted) _showErrorSnackBar('Something went wrong. Please try again.');
+      if (mounted) _showSnackBar('Verification failed. Please try again.', isError: true);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
-  void _showErrorSnackBar(String message) {
+  void _showSnackBar(String message, {bool isError = true}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           message,
           style: const TextStyle(color: AppColors.onPrimary),
         ),
-        backgroundColor: AppColors.danger,
+        backgroundColor: isError ? AppColors.danger : AppColors.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -71,6 +130,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isPhoneStep = _step == _Step.phone;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -100,56 +161,126 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Sign in with your crew credentials',
+                  Text(
+                    isPhoneStep
+                        ? 'Enter your registered phone number to receive a sign-in code.'
+                        : 'Enter the 6-digit code sent to ${_phoneController.text.trim()}.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
+                      height: 1.4,
                     ),
                   ),
                   const SizedBox(height: 32),
-                  _EocTextField(
-                    controller: _emailController,
-                    hintText: 'Email address',
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    prefixIcon: const Icon(
-                      Icons.email_outlined,
-                      color: AppColors.textMuted,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _EocTextField(
-                    controller: _passwordController,
-                    hintText: 'Password',
-                    obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _isSubmitting ? null : _handleSignIn(),
-                    prefixIcon: const Icon(
-                      Icons.lock_outline,
-                      color: AppColors.textMuted,
-                      size: 20,
-                    ),
-                    suffixIcon: GestureDetector(
-                      onTap: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                      child: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
+                  if (isPhoneStep) ...[
+                    _EocTextField(
+                      controller: _phoneController,
+                      hintText: 'e.g. 0712 345 678',
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _isSubmitting ? null : _handleSendCode(),
+                      prefixIcon: const Icon(
+                        Icons.call_outlined,
                         color: AppColors.textMuted,
                         size: 20,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 24),
+                    _PrimaryButton(
+                      label: 'Send code',
+                      isSubmitting: _isSubmitting,
+                      onPressed: _isSubmitting ? null : _handleSendCode,
+                    ),
+                  ] else ...[
+                    _EocTextField(
+                      controller: _codeController,
+                      focusNode: _codeFocusNode,
+                      hintText: '000000',
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      textInputAction: TextInputAction.done,
+                      style: const TextStyle(
+                        color: AppColors.text,
+                        fontSize: 22,
+                        letterSpacing: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      onChanged: (val) {
+                        final cleaned = val.replaceAll(RegExp(r'[^0-9]'), '');
+                        if (cleaned != val) {
+                          _codeController.value = TextEditingValue(
+                            text: cleaned,
+                            selection: TextSelection.collapsed(offset: cleaned.length),
+                          );
+                        }
+                      },
+                      onSubmitted: (_) => _isSubmitting ? null : _handleVerifyCode(),
+                      prefixIcon: const Icon(
+                        Icons.pin_outlined,
+                        color: AppColors.textMuted,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _PrimaryButton(
+                      label: 'Verify & sign in',
+                      isSubmitting: _isSubmitting,
+                      onPressed: _isSubmitting ? null : _handleVerifyCode,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: _isSubmitting
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _step = _Step.phone;
+                                    _codeController.clear();
+                                  });
+                                },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Change number',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: (_isSubmitting || _cooldown > 0)
+                              ? null
+                              : _handleSendCode,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            _cooldown > 0
+                                ? 'Resend code in ${_cooldown}s'
+                                : 'Resend code',
+                            style: TextStyle(
+                              color: _cooldown > 0
+                                  ? AppColors.textMuted
+                                  : AppColors.brandNavy,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 24),
-                  _SignInButton(
-                    isSubmitting: _isSubmitting,
-                    onPressed: _isSubmitting ? null : _handleSignIn,
-                  ),
-                  const SizedBox(height: 16),
                   const Text(
                     'For Drivers, EMTs, and Nurses only.\n'
                     'Contact your dispatcher if you need an account.',
@@ -211,22 +342,26 @@ class _EocTextField extends StatelessWidget {
   const _EocTextField({
     required this.controller,
     required this.hintText,
-    this.obscureText = false,
+    this.focusNode,
     this.keyboardType,
+    this.maxLength,
     this.textInputAction,
+    this.style,
+    this.onChanged,
     this.onSubmitted,
     this.prefixIcon,
-    this.suffixIcon,
   });
 
   final TextEditingController controller;
   final String hintText;
-  final bool obscureText;
+  final FocusNode? focusNode;
   final TextInputType? keyboardType;
+  final int? maxLength;
   final TextInputAction? textInputAction;
+  final TextStyle? style;
+  final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final Widget? prefixIcon;
-  final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -234,19 +369,25 @@ class _EocTextField extends StatelessWidget {
       height: 58,
       child: TextField(
         controller: controller,
-        obscureText: obscureText,
+        focusNode: focusNode,
         keyboardType: keyboardType,
+        maxLength: maxLength,
         textInputAction: textInputAction,
+        onChanged: onChanged,
         onSubmitted: onSubmitted,
-        style: const TextStyle(
-          color: AppColors.text,
-          fontSize: 15,
-        ),
+        style: style ??
+            const TextStyle(
+              color: AppColors.text,
+              fontSize: 15,
+            ),
         decoration: InputDecoration(
+          counterText: '',
           hintText: hintText,
-          hintStyle: const TextStyle(
+          hintStyle: TextStyle(
             color: AppColors.textMuted,
-            fontSize: 15,
+            fontSize: style?.fontSize ?? 15,
+            letterSpacing: 0,
+            fontWeight: FontWeight.normal,
           ),
           filled: true,
           fillColor: AppColors.inputBg,
@@ -258,13 +399,6 @@ class _EocTextField extends StatelessWidget {
                 )
               : null,
           prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-          suffixIcon: suffixIcon != null
-              ? Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: suffixIcon,
-                )
-              : null,
-          suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
             borderSide: BorderSide.none,
@@ -275,7 +409,7 @@ class _EocTextField extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
           ),
         ),
       ),
@@ -283,19 +417,21 @@ class _EocTextField extends StatelessWidget {
   }
 }
 
-class _SignInButton extends StatelessWidget {
-  const _SignInButton({
+class _PrimaryButton extends StatelessWidget {
+  const _PrimaryButton({
+    required this.label,
     required this.isSubmitting,
     required this.onPressed,
   });
 
+  final String label;
   final bool isSubmitting;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 54,
+      height: 58,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
@@ -303,7 +439,7 @@ class _SignInButton extends StatelessWidget {
           disabledBackgroundColor: AppColors.brandNavy.withValues(alpha: 0.6),
           foregroundColor: AppColors.onPrimary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(15),
           ),
           elevation: 0,
         ),
@@ -316,9 +452,9 @@ class _SignInButton extends StatelessWidget {
                   strokeWidth: 2.5,
                 ),
               )
-            : const Text(
-                'Sign In',
-                style: TextStyle(
+            : Text(
+                label,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.3,
@@ -328,3 +464,4 @@ class _SignInButton extends StatelessWidget {
     );
   }
 }
+

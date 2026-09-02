@@ -107,11 +107,30 @@ class _AuthGateState extends State<_AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.background,
+    return Scaffold(
+      backgroundColor: AppColors.brandNavy,
       body: Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 160,
+              height: 160,
+              child: Image.asset(
+                'assets/images/logo_machakos.jpg',
+                fit: BoxFit.contain,
+                semanticLabel: 'Machakos County EOC',
+              ),
+            ),
+            const SizedBox(height: 28),
+            const CircularProgressIndicator(
+              color: AppColors.onPrimary,
+              strokeWidth: 2.5,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+

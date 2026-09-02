@@ -10,7 +10,7 @@ class AuthResult {
     required this.token,
     required this.userId,
     required this.name,
-    required this.email,
+    required this.phone,
     required this.role,
     required this.agencyId,
   });
@@ -18,28 +18,58 @@ class AuthResult {
   final String token;
   final String userId;
   final String name;
-  final String email;
+  final String phone;
   final String role;
   final String agencyId;
 }
 
-/// Handles responder authentication and credential storage.
+/// OTP request payload result.
+class OtpRequestResult {
+  const OtpRequestResult({
+    required this.phone,
+    required this.expiresInSeconds,
+  });
+
+  final String phone;
+  final int expiresInSeconds;
+}
+
+/// Handles responder authentication via OTP and credential storage.
 class AuthRepository {
   AuthRepository();
 
   final _storage = SecureStorageService.instance;
 
-  Future<AuthResult> login(String email, String password) async {
+  /// Request a 6-digit OTP code to the responder's phone number.
+  Future<OtpRequestResult> requestOtp(String phone) async {
     final response = await ApiClient.instance.post(
-      '/auth/login',
-      data: {'email': email, 'passwordRaw': password},
+      '/auth/otp/request',
+      data: {'phone': phone},
+    );
+
+    final body = response.data as Map<String, dynamic>;
+    final data = body['data'] as Map<String, dynamic>;
+    final phoneResp = data['phone'] as String? ?? phone;
+    final expiresInSeconds = (data['expiresInSeconds'] as num?)?.toInt() ?? 300;
+
+    return OtpRequestResult(
+      phone: phoneResp,
+      expiresInSeconds: expiresInSeconds,
+    );
+  }
+
+  /// Verify the 6-digit OTP code and complete sign-in.
+  Future<AuthResult> verifyOtp(String phone, String code) async {
+    final response = await ApiClient.instance.post(
+      '/auth/otp/verify',
+      data: {'phone': phone, 'code': code},
     );
 
     final body = response.data as Map<String, dynamic>;
     final data = body['data'] as Map<String, dynamic>;
     final token = data['token'] as String;
     final user = data['user'] as Map<String, dynamic>;
-    final role = user['role'] as String;
+    final role = user['role'] as String? ?? '';
 
     if (!_allowedRoles.contains(role)) {
       await _storage.clearAll();
@@ -58,11 +88,11 @@ class AuthRepository {
 
     return AuthResult(
       token: token,
-      userId: user['id'] as String,
-      name: user['name'] as String,
-      email: user['email'] as String,
+      userId: user['id'] as String? ?? '',
+      name: user['name'] as String? ?? '',
+      phone: user['phone'] as String? ?? phone,
       role: role,
-      agencyId: user['agencyId'] as String,
+      agencyId: user['agencyId'] as String? ?? '',
     );
   }
 
@@ -71,3 +101,4 @@ class AuthRepository {
     await _storage.clearAll();
   }
 }
+
