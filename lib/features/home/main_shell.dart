@@ -4,8 +4,9 @@ import 'package:mobileapp/core/theme/app_colors.dart';
 import 'package:mobileapp/features/tasks/task_screen.dart';
 import 'package:mobileapp/features/crew/crew_screen.dart';
 import 'package:mobileapp/features/history/history_screen.dart';
+import 'package:mobileapp/features/inventory/inventory_screen.dart';
 
-/// Main navigation shell containing Assignment, Crew, and History tabs.
+/// Main navigation shell containing Assignment, Crew, History, and Inventory tabs.
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -20,6 +21,7 @@ class _MainShellState extends State<MainShell> {
     TaskScreen(),
     CrewScreen(),
     HistoryScreen(),
+    InventoryScreen(),
   ];
 
   @override
@@ -57,6 +59,11 @@ class _MainShellState extends State<MainShell> {
             icon: Icon(Icons.history_outlined),
             selectedIcon: Icon(Icons.history, color: AppColors.primary),
             label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.inventory_2_outlined),
+            selectedIcon: Icon(Icons.inventory_2, color: AppColors.primary),
+            label: 'Inventory',
           ),
         ],
       ),
