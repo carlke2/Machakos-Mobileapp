@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
-/// App theme definitions matching Malteser-NMS styling and component tokens.
+/// App theme definitions for MCCG (Machakos County Government EOC).
 abstract final class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
@@ -11,6 +11,8 @@ abstract final class AppTheme {
         seedColor: AppColors.primary,
         primary: AppColors.primary,
         onPrimary: AppColors.onPrimary,
+        secondary: AppColors.accent,
+        onSecondary: AppColors.onAccent,
         surface: AppColors.surface,
         onSurface: AppColors.text,
         error: AppColors.danger,
@@ -58,22 +60,22 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.brandNavy,
-          foregroundColor: AppColors.onPrimary,
+          backgroundColor: AppColors.accent,
+          foregroundColor: AppColors.onAccent,
           minimumSize: const Size.fromHeight(56),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
           ),
           textStyle: const TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.brandNavy,
-          foregroundColor: AppColors.onPrimary,
+          backgroundColor: AppColors.accent,
+          foregroundColor: AppColors.onAccent,
           minimumSize: const Size.fromHeight(56),
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -81,7 +83,7 @@ abstract final class AppTheme {
           ),
           textStyle: const TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

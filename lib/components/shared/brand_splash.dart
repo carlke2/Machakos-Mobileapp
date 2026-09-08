@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
-/// In-app splash screen matching Malteser-NMS BrandSplash component.
-/// Displays the primary brand background (#005A32), centered logo, and an onPrimary spinner.
+/// Official MCCG splash screen displaying the centered circular badge on Navy.
 class BrandSplash extends StatelessWidget {
   const BrandSplash({
     super.key,
@@ -27,8 +26,8 @@ class BrandSplash extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 20,
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 24,
                     offset: const Offset(0, 8),
                   ),
                 ],
@@ -39,16 +38,37 @@ class BrandSplash extends StatelessWidget {
                 child: Image.asset(
                   'assets/images/logo_machakos.jpg',
                   fit: BoxFit.contain,
+                  semanticLabel: 'MCCG Crest',
                 ),
               ),
             ),
+            const SizedBox(height: 24),
+            const Text(
+              'MCCG',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2.0,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Emergency Operations Center',
+              style: TextStyle(
+                color: AppColors.accent,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
             if (showSpinner) ...[
-              const SizedBox(height: 28),
+              const SizedBox(height: 36),
               const SizedBox(
-                width: 28,
-                height: 28,
+                width: 26,
+                height: 26,
                 child: CircularProgressIndicator(
-                  color: AppColors.onPrimary,
+                  color: AppColors.accent,
                   strokeWidth: 2.8,
                 ),
               ),

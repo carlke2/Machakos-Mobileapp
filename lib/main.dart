@@ -42,9 +42,8 @@ class MccgEocApp extends StatelessWidget {
   }
 }
 
-/// Fast startup auth gate matching Malteser-NMS architecture.
-/// Reads local session with instant offline JWT exp check, then transitions
-/// immediately while performing silent background token verification.
+/// Non-blocking startup auth gate for MCCG.
+/// Performs instantaneous offline session validation before background sync.
 class _AuthGate extends StatefulWidget {
   const _AuthGate();
 

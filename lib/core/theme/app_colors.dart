@@ -1,23 +1,34 @@
 import 'package:flutter/material.dart';
 
-/// Color tokens for the Machakos County EOC mobile app.
+/// Official brand color tokens for MCCG (Machakos County Government EOC).
 abstract final class AppColors {
-  static const Color background = Color(0xFFF4F7F5);
+  // Brand identity: Navy Blue + Yellow/Gold
+  static const Color primary = Color(0xFF0B1B3D);
+  static const Color primaryLight = Color(0xFF162D5A);
+  static const Color brandNavy = Color(0xFF0B1B3D);
+  static const Color accent = Color(0xFFF4B41A);
+  static const Color accentDark = Color(0xFFD49B0E);
+  static const Color brandGold = Color(0xFFF4B41A);
+
+  // Surface & backgrounds
+  static const Color background = Color(0xFFF6F8FA);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color card = Color(0xFFFFFFFF);
-  static const Color inputBg = Color(0xFFF1F5F3);
-  static const Color text = Color(0xFF15211B);
-  static const Color textSecondary = Color(0xFF6B7670);
-  static const Color textMuted = Color(0xFF94A099);
+  static const Color inputBg = Color(0xFFF1F4F9);
+  static const Color border = Color(0xFFE2E8F0);
+
+  // Typography & contrast
+  static const Color text = Color(0xFF0F172A);
+  static const Color textSecondary = Color(0xFF475569);
+  static const Color textMuted = Color(0xFF94A3B8);
   static const Color onPrimary = Color(0xFFFFFFFF);
-  static const Color primary = Color(0xFF005A32);
-  static const Color accent = Color(0xFF169A5B);
-  static const Color brandNavy = Color(0xFF06231A);
-  static const Color border = Color(0xFFE3E8E5);
-  static const Color danger = Color(0xFFD62828);
-  static const Color dangerBg = Color(0xFFFBEAEA);
-  static const Color success = Color(0xFF169A5B);
-  static const Color successBg = Color(0xFFE8F3ED);
-  static const Color noteBg = Color(0xFFF8FAF9);
-  static const Color locationBg = Color(0xFFE8F3ED);
+  static const Color onAccent = Color(0xFF0B1B3D);
+
+  // Status tokens
+  static const Color danger = Color(0xFFDC2626);
+  static const Color dangerBg = Color(0xFFFEF2F2);
+  static const Color success = Color(0xFF10B981);
+  static const Color successBg = Color(0xFFECFDF5);
+  static const Color noteBg = Color(0xFFF8FAFC);
+  static const Color locationBg = Color(0xFFEFF6FF);
 }
