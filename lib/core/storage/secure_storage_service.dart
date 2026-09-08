@@ -62,4 +62,25 @@ class SecureStorageService {
       _storage.delete(key: _keyUser),
     ]);
   }
+
+  /// Checks whether a JWT token is expired based on its standard `exp` claim.
+  /// Returns `true` if expired or invalid; `false` if still within its valid window.
+  bool isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final map = jsonDecode(payload);
+      if (map is Map<String, dynamic> && map.containsKey('exp')) {
+        final exp = map['exp'];
+        if (exp is int) {
+          final expDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+          return DateTime.now().isAfter(expDate);
+        }
+      }
+      return false;
+    } catch (_) {
+      return true;
+    }
+  }
 }

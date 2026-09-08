@@ -27,21 +27,48 @@ class ApiClient {
   ApiClient._();
 
   static ApiClient? _instance;
+  static Completer<String>? _readyCompleter;
 
   static ApiClient get instance {
-    assert(_instance != null,
-        'ApiClient.init() must be called before accessing ApiClient.instance');
+    if (_instance == null) {
+      _instance = ApiClient._().._setUp(_candidateBaseUrls.first);
+      ensureReady();
+    }
     return _instance!;
   }
 
   late final Dio _dio;
-  late final String baseUrl;
+  late String baseUrl;
   static bool _isLoggingOut = false;
 
+  /// Ensures base URL probe is completed. Safe to call non-blocking at startup.
+  static Future<String> ensureReady() {
+    if (_readyCompleter != null) return _readyCompleter!.future;
+    final completer = Completer<String>();
+    _readyCompleter = completer;
+
+    _probeBaseUrl().then((url) {
+      final winningUrl = url ?? _candidateBaseUrls.first;
+      debugPrint('[ApiClient] Configured active base URL: $winningUrl');
+      if (_instance != null) {
+        _instance!.baseUrl = winningUrl;
+        _instance!._dio.options.baseUrl = winningUrl;
+      }
+      completer.complete(winningUrl);
+    }).catchError((e) {
+      final fallback = _candidateBaseUrls.first;
+      if (_instance != null) {
+        _instance!.baseUrl = fallback;
+        _instance!._dio.options.baseUrl = fallback;
+      }
+      completer.complete(fallback);
+    });
+
+    return completer.future;
+  }
+
   static Future<void> init() async {
-    final winningUrl = await _probeBaseUrl() ?? _candidateBaseUrls.first;
-    debugPrint('[ApiClient] Configured active base URL: $winningUrl');
-    _instance = ApiClient._().._setUp(winningUrl);
+    await ensureReady();
   }
 
   void _setUp(String url) {
@@ -54,6 +81,8 @@ class ApiClient {
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
+        await ensureReady();
+        options.baseUrl = baseUrl;
         final token = await SecureStorageService.instance.getToken();
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';

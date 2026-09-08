@@ -156,24 +156,39 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.text,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    isPhoneStep
-                        ? 'Enter your registered phone number to receive a sign-in code.'
-                        : 'Enter the 6-digit code sent to ${_phoneController.text.trim()}.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                      height: 1.4,
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      isPhoneStep
+                          ? 'Enter your registered phone number to receive a sign-in code.'
+                          : 'Enter the 6-digit code sent to ${_phoneController.text.trim()}.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 15,
+                        height: 1.45,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 32),
                   if (isPhoneStep) ...[
+                    const Padding(
+                      padding: EdgeInsets.only(left: 2, bottom: 8),
+                      child: Text(
+                        'Phone number',
+                        style: TextStyle(
+                          color: AppColors.text,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                     _EocTextField(
                       controller: _phoneController,
                       hintText: 'e.g. 0712 345 678',
@@ -182,17 +197,28 @@ class _LoginScreenState extends State<LoginScreen> {
                       onSubmitted: (_) => _isSubmitting ? null : _handleSendCode(),
                       prefixIcon: const Icon(
                         Icons.call_outlined,
-                        color: AppColors.textMuted,
+                        color: AppColors.textSecondary,
                         size: 20,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     _PrimaryButton(
                       label: 'Send code',
                       isSubmitting: _isSubmitting,
                       onPressed: _isSubmitting ? null : _handleSendCode,
                     ),
                   ] else ...[
+                    const Padding(
+                      padding: EdgeInsets.only(left: 2, bottom: 8),
+                      child: Text(
+                        '6-digit code',
+                        style: TextStyle(
+                          color: AppColors.text,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                     _EocTextField(
                       controller: _codeController,
                       focusNode: _codeFocusNode,

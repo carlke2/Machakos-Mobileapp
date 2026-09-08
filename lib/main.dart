@@ -1,9 +1,11 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'components/shared/brand_splash.dart';
 import 'core/network/api_client.dart';
 import 'core/services/notification_service.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'core/theme/app_colors.dart';
+import 'core/theme/app_theme.dart';
 import 'features/auth/login_screen.dart';
 import 'features/home/main_shell.dart';
 
@@ -14,9 +16,15 @@ const _allowedRoles = {'DRIVER', 'EMT', 'NURSE'};
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  await ApiClient.init();
-  await NotificationService.instance.initialize();
+
+  // Decoupled non-blocking background initializations:
+  ApiClient.ensureReady();
+  Firebase.initializeApp().then((_) {
+    NotificationService.instance.initialize();
+  }).catchError((e) {
+    debugPrint('[main] Firebase initialization error: $e');
+  });
+
   runApp(const MachakosEocApp());
 }
 
@@ -29,21 +37,15 @@ class MachakosEocApp extends StatelessWidget {
       title: 'Machakos EOC',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: AppColors.background,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primary,
-          surface: AppColors.surface,
-        ),
-        inputDecorationTheme: const InputDecorationTheme(isDense: true),
-      ),
+      theme: AppTheme.lightTheme,
       home: const _AuthGate(),
     );
   }
 }
 
-/// Checks for a stored JWT on launch and routes accordingly.
+/// Fast startup auth gate matching Malteser-NMS architecture.
+/// Reads local session with instant offline JWT exp check, then transitions
+/// immediately while performing silent background token verification.
 class _AuthGate extends StatefulWidget {
   const _AuthGate();
 
@@ -60,35 +62,64 @@ class _AuthGateState extends State<_AuthGate> {
 
   Future<void> _resolve() async {
     final storage = SecureStorageService.instance;
-    final token = await storage.getToken();
+    final results = await Future.wait([
+      storage.getToken(),
+      storage.getUser(),
+    ]);
 
+    final token = results[0] as String?;
+    final user = results[1] as Map<String, dynamic>?;
+
+    // 1. Missing token -> immediate login
     if (token == null || token.isEmpty) {
       _goToLogin();
       return;
     }
 
-    // Validate token + re-check role via GET /auth/me.
-    try {
-      final response = await ApiClient.instance.get('/auth/me');
-      final body = response.data as Map<String, dynamic>;
-      final user = body['data'] as Map<String, dynamic>;
-      final role = user['role'] as String? ?? '';
+    // 2. Offline JWT exp claim check -> immediate login if expired
+    if (storage.isTokenExpired(token)) {
+      debugPrint('[AuthGate] Stored JWT expired. Clearing session.');
+      await storage.clearAll();
+      _goToLogin();
+      return;
+    }
 
-      if (!_allowedRoles.contains(role)) {
-        await storage.clearAll();
-        _goToLogin();
+    // 3. Verify responder role on stored user data
+    final role = user?['role'] as String? ?? '';
+    if (user != null && !_allowedRoles.contains(role)) {
+      debugPrint('[AuthGate] User role $role not authorized.');
+      await storage.clearAll();
+      _goToLogin();
+      return;
+    }
+
+    // 4. Valid session -> immediate transition to MainShell!
+    _goToMainShell();
+
+    // 5. Silent non-blocking server verification & FCM registration
+    _silentVerifyAndRegister();
+  }
+
+  void _silentVerifyAndRegister() {
+    NotificationService.instance.registerToken();
+
+    // Non-blocking server validation post-launch:
+    ApiClient.instance.get('/auth/me').then((response) {
+      final body = response.data as Map<String, dynamic>;
+      final remoteUser = body['data'] as Map<String, dynamic>;
+      final remoteRole = remoteUser['role'] as String? ?? '';
+
+      if (!_allowedRoles.contains(remoteRole)) {
+        debugPrint('[AuthGate] Remote user role revoked: $remoteRole');
+        SecureStorageService.instance.clearAll().then((_) => _goToLogin());
         return;
       }
 
-      // Token valid, role OK — persist refreshed user data and proceed.
-      await storage.saveUser(user);
-      NotificationService.instance.registerToken();
-      _goToMainShell();
-    } catch (_) {
-      // Token expired / network error — clear and show login.
-      await storage.clearAll();
-      _goToLogin();
-    }
+      SecureStorageService.instance.saveUser(remoteUser);
+    }).catchError((e) {
+      // 401 is automatically caught by ApiClient interceptor which forces logout
+      debugPrint('[AuthGate] Silent revalidation error: $e');
+    });
   }
 
   void _goToLogin() {
@@ -107,30 +138,7 @@ class _AuthGateState extends State<_AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.brandNavy,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 160,
-              height: 160,
-              child: Image.asset(
-                'assets/images/logo_machakos.jpg',
-                fit: BoxFit.contain,
-                semanticLabel: 'Machakos County EOC',
-              ),
-            ),
-            const SizedBox(height: 28),
-            const CircularProgressIndicator(
-              color: AppColors.onPrimary,
-              strokeWidth: 2.5,
-            ),
-          ],
-        ),
-      ),
-    );
+    return const BrandSplash(showSpinner: true);
   }
 }
 
