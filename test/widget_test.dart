@@ -5,7 +5,8 @@ import 'package:mobileapp/main.dart';
 void main() {
   testWidgets('Login screen smoke test — renders Sign In button',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const MachakosEocApp());
+    await tester.pumpWidget(const MccgEocApp());
+    await tester.pumpAndSettle();
 
     // Verify core login UI elements are present.
     expect(find.text('Sign In'), findsOneWidget);

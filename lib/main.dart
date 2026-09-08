@@ -24,16 +24,16 @@ Future<void> main() async {
     debugPrint('[main] Firebase initialization error: $e');
   });
 
-  runApp(const MachakosEocApp());
+  runApp(const MccgEocApp());
 }
 
-class MachakosEocApp extends StatelessWidget {
-  const MachakosEocApp({super.key});
+class MccgEocApp extends StatelessWidget {
+  const MccgEocApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Machakos EOC',
+      title: 'MCCG EOC',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

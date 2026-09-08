@@ -129,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   _EocTextField(
                     controller: _emailController,
-                    hintText: 'e.g. driver1@nms.go.ke',
+                    hintText: 'e.g. driver1@mccg.go.ke',
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     prefixIcon: const Icon(
@@ -220,7 +220,7 @@ class _LogoRow extends StatelessWidget {
           child: Image.asset(
             'assets/images/logo_machakos.jpg',
             fit: BoxFit.contain,
-            semanticLabel: 'Machakos County',
+            semanticLabel: 'MCCG (Machakos County Government)',
           ),
         ),
         Container(

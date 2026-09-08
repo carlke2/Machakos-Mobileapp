@@ -274,7 +274,7 @@ class _TaskScreenState extends State<TaskScreen> {
         foregroundColor: AppColors.onPrimary,
         elevation: 0,
         title: const Text(
-          'Machakos EOC',
+          'MCCG EOC',
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
       ),
