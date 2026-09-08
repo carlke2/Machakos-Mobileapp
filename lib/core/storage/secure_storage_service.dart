@@ -14,25 +14,52 @@ class SecureStorageService {
   static const _keyToken = 'eoc_jwt_token';
   static const _keyUser = 'eoc_user_json';
 
-  Future<void> saveToken(String token) =>
-      _storage.write(key: _keyToken, value: token);
+  String? _cachedToken;
+  Map<String, dynamic>? _cachedUser;
 
-  Future<String?> getToken() => _storage.read(key: _keyToken);
-
-  Future<void> deleteToken() => _storage.delete(key: _keyToken);
-
-  Future<void> saveUser(Map<String, dynamic> user) =>
-      _storage.write(key: _keyUser, value: jsonEncode(user));
-
-  Future<Map<String, dynamic>?> getUser() async {
-    final raw = await _storage.read(key: _keyUser);
-    if (raw == null) return null;
-    return jsonDecode(raw) as Map<String, dynamic>;
+  Future<void> saveToken(String token) {
+    _cachedToken = token;
+    return _storage.write(key: _keyToken, value: token);
   }
 
-  Future<void> deleteUser() => _storage.delete(key: _keyUser);
+  Future<String?> getToken({bool forceRefresh = false}) async {
+    if (!forceRefresh && _cachedToken != null) return _cachedToken;
+    _cachedToken = await _storage.read(key: _keyToken);
+    return _cachedToken;
+  }
+
+  Future<void> deleteToken() {
+    _cachedToken = null;
+    return _storage.delete(key: _keyToken);
+  }
+
+  Future<void> saveUser(Map<String, dynamic> user) {
+    _cachedUser = user;
+    return _storage.write(key: _keyUser, value: jsonEncode(user));
+  }
+
+  Future<Map<String, dynamic>?> getUser({bool forceRefresh = false}) async {
+    if (!forceRefresh && _cachedUser != null) return _cachedUser;
+    final raw = await _storage.read(key: _keyUser);
+    if (raw == null) {
+      _cachedUser = null;
+      return null;
+    }
+    _cachedUser = jsonDecode(raw) as Map<String, dynamic>;
+    return _cachedUser;
+  }
+
+  Future<void> deleteUser() {
+    _cachedUser = null;
+    return _storage.delete(key: _keyUser);
+  }
 
   Future<void> clearAll() async {
-    await Future.wait([deleteToken(), deleteUser()]);
+    _cachedToken = null;
+    _cachedUser = null;
+    await Future.wait([
+      _storage.delete(key: _keyToken),
+      _storage.delete(key: _keyUser),
+    ]);
   }
 }

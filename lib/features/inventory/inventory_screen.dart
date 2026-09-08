@@ -96,6 +96,20 @@ class _StockTab extends StatefulWidget {
   State<_StockTab> createState() => _StockTabState();
 }
 
+sealed class _StockListItem {
+  const _StockListItem();
+}
+
+class _StockHeaderItem extends _StockListItem {
+  final String category;
+  const _StockHeaderItem(this.category);
+}
+
+class _StockProductItem extends _StockListItem {
+  final InventoryItem item;
+  const _StockProductItem(this.item);
+}
+
 class _StockTabState extends State<_StockTab>
     with AutomaticKeepAliveClientMixin {
   final _repo = const InventoryRepository();
@@ -103,6 +117,7 @@ class _StockTabState extends State<_StockTab>
   bool _loading = true;
   String? _error;
   List<InventoryItem> _items = [];
+  List<_StockListItem> _flatList = [];
 
   /// itemId → CartLine (local cart, not yet sent to the API).
   final Map<String, CartLine> _cart = {};
@@ -125,7 +140,23 @@ class _StockTabState extends State<_StockTab>
     });
     try {
       final items = await _repo.listAvailable();
-      if (mounted) setState(() => _items = items);
+      if (mounted) {
+        final grouped = <String, List<InventoryItem>>{};
+        for (final item in items) {
+          (grouped[item.category] ??= []).add(item);
+        }
+        final flat = <_StockListItem>[];
+        for (final entry in grouped.entries) {
+          flat.add(_StockHeaderItem(entry.key));
+          for (final item in entry.value) {
+            flat.add(_StockProductItem(item));
+          }
+        }
+        setState(() {
+          _items = items;
+          _flatList = flat;
+        });
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
@@ -211,27 +242,26 @@ class _StockTabState extends State<_StockTab>
       return const _EmptyView(message: 'No inventory items found');
     }
 
-    // Group by category — preserve the backend sort order (category asc, name asc).
-    final grouped = <String, List<InventoryItem>>{};
-    for (final item in _items) {
-      (grouped[item.category] ??= []).add(item);
-    }
-
     return Stack(
       children: [
         RefreshIndicator(
           onRefresh: _load,
           child: ListView.builder(
             padding: const EdgeInsets.only(bottom: 96),
-            itemCount: grouped.entries.length,
+            itemCount: _flatList.length,
             itemBuilder: (context, i) {
-              final entry = grouped.entries.elementAt(i);
-              return _CategorySection(
-                category: entry.key,
-                items: entry.value,
-                cart: _cart,
-                onSetQty: _setQty,
-              );
+              final listItem = _flatList[i];
+              if (listItem is _StockHeaderItem) {
+                return _CategoryHeader(category: listItem.category);
+              } else if (listItem is _StockProductItem) {
+                final item = listItem.item;
+                return _StockItemRow(
+                  item: item,
+                  cartQty: _cart[item.id]?.quantity ?? 0,
+                  onSetQty: _setQty,
+                );
+              }
+              return const SizedBox.shrink();
             },
           ),
         ),
@@ -276,51 +306,33 @@ class _StockTabState extends State<_StockTab>
   }
 }
 
-// ── Category section ──────────────────────────────────────────────────────────
+// ── Category header ──────────────────────────────────────────────────────────
 
-class _CategorySection extends StatelessWidget {
-  const _CategorySection({
-    required this.category,
-    required this.items,
-    required this.cart,
-    required this.onSetQty,
-  });
+class _CategoryHeader extends StatelessWidget {
+  const _CategoryHeader({required this.category});
 
   final String category;
-  final List<InventoryItem> items;
-  final Map<String, CartLine> cart;
-  final void Function(InventoryItem, int) onSetQty;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-          child: Row(
-            children: [
-              Icon(_categoryIcon(category),
-                  size: 16, color: AppColors.primary),
-              const SizedBox(width: 6),
-              Text(
-                _categoryLabel(category).toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.1,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+      child: Row(
+        children: [
+          Icon(_categoryIcon(category),
+              size: 16, color: AppColors.primary),
+          const SizedBox(width: 6),
+          Text(
+            _categoryLabel(category).toUpperCase(),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.1,
+              color: AppColors.textSecondary,
+            ),
           ),
-        ),
-        ...items.map((item) => _StockItemRow(
-              item: item,
-              cartQty: cart[item.id]?.quantity ?? 0,
-              onSetQty: onSetQty,
-            )),
-      ],
+        ],
+      ),
     );
   }
 }

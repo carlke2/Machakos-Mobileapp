@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../storage/secure_storage_service.dart';
@@ -20,7 +21,7 @@ const List<String> _candidateBaseUrls = [
   'http://localhost:3000',
 ];
 
-const _probeTimeout = Duration(seconds: 3);
+const _probeTimeout = Duration(milliseconds: 1500);
 
 class ApiClient {
   ApiClient._();
@@ -180,24 +181,35 @@ class ApiClient {
 }
 
 Future<String?> _probeBaseUrl() async {
-  final probe = Dio(BaseOptions(
-    connectTimeout: _probeTimeout,
-    receiveTimeout: _probeTimeout,
-    validateStatus: (status) => status != null && status < 500,
-  ));
+  final completer = Completer<String?>();
+  int remaining = _candidateBaseUrls.length;
 
   for (final url in _candidateBaseUrls) {
-    try {
-      debugPrint('[ApiClient] Probing $url ...');
-      final res = await probe.get('$url/');
-      if (res.statusCode != null && res.statusCode! < 500) {
+    debugPrint('[ApiClient] Probing $url ...');
+    final probe = Dio(BaseOptions(
+      connectTimeout: _probeTimeout,
+      receiveTimeout: _probeTimeout,
+      validateStatus: (status) => status != null && status < 500,
+    ));
+
+    probe.get('$url/').then((res) {
+      if (!completer.isCompleted && res.statusCode != null && res.statusCode! < 500) {
         debugPrint('[ApiClient] Probe SUCCESS for $url (${res.statusCode})');
-        return url;
+        completer.complete(url);
+      } else {
+        remaining--;
+        if (remaining == 0 && !completer.isCompleted) {
+          completer.complete(null);
+        }
       }
-    } catch (e) {
+    }).catchError((e) {
       debugPrint('[ApiClient] Probe failed for $url: $e');
-      continue;
-    }
+      remaining--;
+      if (remaining == 0 && !completer.isCompleted) {
+        completer.complete(null);
+      }
+    });
   }
-  return null;
+
+  return completer.future;
 }

@@ -42,16 +42,25 @@ class _CrewScreenState extends State<CrewScreen> {
   Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
     try {
-      final user = await SecureStorageService.instance.getUser();
-      final checkIn = await _repository.getMyCheckIn();
-      final vehicles = await _repository.getVehicles();
-
-      List<CrewMember> crewMembers = [];
-      try {
-        crewMembers = await _repository.getCrewMembers();
-      } catch (e) {
+      final userFuture = SecureStorageService.instance.getUser();
+      final checkInFuture = _repository.getMyCheckIn();
+      final vehiclesFuture = _repository.getVehicles();
+      final crewMembersFuture = _repository.getCrewMembers().catchError((e) {
         debugPrint('Failed to load assignable crew members: $e');
-      }
+        return <CrewMember>[];
+      });
+
+      final results = await Future.wait([
+        userFuture,
+        checkInFuture,
+        vehiclesFuture,
+        crewMembersFuture,
+      ]);
+
+      final user = results[0] as Map<String, dynamic>?;
+      final checkIn = results[1] as CheckInStatus?;
+      final vehicles = results[2] as List<Vehicle>;
+      final crewMembers = results[3] as List<CrewMember>;
 
       if (mounted) {
         setState(() {

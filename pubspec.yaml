@@ -58,6 +58,7 @@ dependencies:
 
   # ── Deep-link / phone dialler ──────────────────────────────────
   url_launcher: ^6.3.1
+  cached_network_image: ^4.0.0
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:mobileapp/core/network/api_client.dart';
 import 'package:mobileapp/core/storage/secure_storage_service.dart';
@@ -328,20 +329,27 @@ class _PcrViewerScreenState extends State<PcrViewerScreen> {
                               constraints: const BoxConstraints(maxHeight: 260),
                               width: double.infinity,
                               color: AppColors.inputBg,
-                              child: Image.network(
-                                fileUrl,
-                                headers: _authToken != null
+                              child: CachedNetworkImage(
+                                imageUrl: fileUrl,
+                                httpHeaders: _authToken != null
                                     ? {'Authorization': 'Bearer $_authToken'}
                                     : null,
                                 fit: BoxFit.contain,
-                                errorBuilder: (ctx, error, stack) => Container(
+                                memCacheWidth: 800,
+                                placeholder: (context, url) => const SizedBox(
+                                  height: 140,
+                                  child: Center(
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                ),
+                                errorWidget: (ctx, url, error) => Container(
                                   padding: const EdgeInsets.all(20),
-                                  child: Column(
+                                  child: const Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Icon(Icons.broken_image_outlined,
+                                      Icon(Icons.broken_image_outlined,
                                           size: 36, color: AppColors.textMuted),
-                                      const SizedBox(height: 8),
+                                      SizedBox(height: 8),
                                       Text(
                                         'Unable to load image inline',
                                         style: TextStyle(

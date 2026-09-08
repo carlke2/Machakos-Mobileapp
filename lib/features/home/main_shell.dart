@@ -16,13 +16,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
-
-  static const List<Widget> _screens = [
-    TaskScreen(),
-    CrewScreen(),
-    HistoryScreen(),
-    InventoryScreen(),
-  ];
+  final Set<int> _loadedTabs = {0};
 
   @override
   void initState() {
@@ -35,11 +29,21 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: [
+          _loadedTabs.contains(0) ? const TaskScreen() : const SizedBox.shrink(),
+          _loadedTabs.contains(1) ? const CrewScreen() : const SizedBox.shrink(),
+          _loadedTabs.contains(2) ? const HistoryScreen() : const SizedBox.shrink(),
+          _loadedTabs.contains(3) ? const InventoryScreen() : const SizedBox.shrink(),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        onDestinationSelected: (i) {
+          setState(() {
+            _currentIndex = i;
+            _loadedTabs.add(i);
+          });
+        },
         backgroundColor: AppColors.surface,
         indicatorColor: AppColors.primary.withValues(alpha: 0.12),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
