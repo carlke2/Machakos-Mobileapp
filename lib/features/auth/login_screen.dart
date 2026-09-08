@@ -1,13 +1,10 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobileapp/core/network/api_client.dart';
 import 'package:mobileapp/core/theme/app_colors.dart';
 import 'package:mobileapp/features/home/main_shell.dart';
 import 'auth_repository.dart';
 
-enum _Step { phone, code }
-
-/// Responder OTP login screen.
+/// Responder credential login screen matching Malteser-NMS visual styling.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -16,88 +13,32 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _codeController = TextEditingController();
-  final FocusNode _codeFocusNode = FocusNode();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
-  _Step _step = _Step.phone;
+  bool _obscurePassword = true;
   bool _isSubmitting = false;
-  int _cooldown = 0;
-  Timer? _cooldownTimer;
 
   @override
   void dispose() {
-    _phoneController.dispose();
-    _codeController.dispose();
-    _codeFocusNode.dispose();
-    _cooldownTimer?.cancel();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  void _startCooldown([int seconds = 45]) {
-    _cooldownTimer?.cancel();
-    setState(() => _cooldown = seconds);
-    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_cooldown <= 1) {
-        timer.cancel();
-        if (mounted) setState(() => _cooldown = 0);
-      } else {
-        if (mounted) setState(() => _cooldown -= 1);
-      }
-    });
-  }
+  Future<void> _handleSignIn() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
 
-  Future<void> _handleSendCode() async {
-    final phone = _phoneController.text.trim();
-    if (phone.isEmpty) {
-      _showSnackBar('Enter your phone number', isError: true);
+    if (email.isEmpty || password.isEmpty) {
+      _showSnackBar('Enter your email and password', isError: true);
       return;
     }
 
     setState(() => _isSubmitting = true);
 
     try {
-      final result = await AuthRepository().requestOtp(phone);
-
-      if (!mounted) return;
-      setState(() {
-        _step = _Step.code;
-        _codeController.clear();
-      });
-      _startCooldown(45);
-
-      final mins = (result.expiresInSeconds / 60).round();
-      _showSnackBar(
-        'Code sent — enter the 6-digit code sent to your phone. It expires in $mins minutes.',
-        isError: false,
-      );
-
-      // Auto focus code field
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) _codeFocusNode.requestFocus();
-      });
-    } on ApiException catch (e) {
-      if (mounted) _showSnackBar('Could not send code: ${e.message}', isError: true);
-    } catch (e) {
-      if (mounted) _showSnackBar('Could not send code. Please try again.', isError: true);
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
-    }
-  }
-
-  Future<void> _handleVerifyCode() async {
-    final phone = _phoneController.text.trim();
-    final code = _codeController.text.trim();
-
-    if (code.length != 6) {
-      _showSnackBar('Enter the 6-digit code', isError: true);
-      return;
-    }
-
-    setState(() => _isSubmitting = true);
-
-    try {
-      await AuthRepository().verifyOtp(phone, code);
+      await AuthRepository().login(email, password);
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -108,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       if (mounted) _showSnackBar(e.message, isError: true);
     } catch (_) {
-      if (mounted) _showSnackBar('Verification failed. Please try again.', isError: true);
+      if (mounted) _showSnackBar('Something went wrong. Please try again.', isError: true);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -123,15 +64,13 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         backgroundColor: isError ? AppColors.danger : AppColors.primary,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isPhoneStep = _step == _Step.phone;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -150,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const Spacer(flex: 2),
                   const _LogoRow(),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
                   const Text(
                     'Emergency Operations Platform',
                     textAlign: TextAlign.center,
@@ -162,14 +101,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
                     child: Text(
-                      isPhoneStep
-                          ? 'Enter your registered phone number to receive a sign-in code.'
-                          : 'Enter the 6-digit code sent to ${_phoneController.text.trim()}.',
+                      'Sign in with your crew credentials.',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 15,
                         height: 1.45,
@@ -177,143 +114,84 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  if (isPhoneStep) ...[
-                    const Padding(
-                      padding: EdgeInsets.only(left: 2, bottom: 8),
-                      child: Text(
-                        'Phone number',
-                        style: TextStyle(
-                          color: AppColors.text,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
+
+                  // Email Address
+                  const Padding(
+                    padding: EdgeInsets.only(left: 2, bottom: 8),
+                    child: Text(
+                      'Email address',
+                      style: TextStyle(
+                        color: AppColors.text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    _EocTextField(
-                      controller: _phoneController,
-                      hintText: 'e.g. 0712 345 678',
-                      keyboardType: TextInputType.phone,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _isSubmitting ? null : _handleSendCode(),
-                      prefixIcon: const Icon(
-                        Icons.call_outlined,
+                  ),
+                  _EocTextField(
+                    controller: _emailController,
+                    hintText: 'e.g. driver1@nms.go.ke',
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    prefixIcon: const Icon(
+                      Icons.email_outlined,
+                      color: AppColors.textSecondary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Password
+                  const Padding(
+                    padding: EdgeInsets.only(left: 2, bottom: 8),
+                    child: Text(
+                      'Password',
+                      style: TextStyle(
+                        color: AppColors.text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  _EocTextField(
+                    controller: _passwordController,
+                    hintText: '••••••••',
+                    obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _isSubmitting ? null : _handleSignIn(),
+                    prefixIcon: const Icon(
+                      Icons.lock_outline,
+                      color: AppColors.textSecondary,
+                      size: 20,
+                    ),
+                    suffixIcon: GestureDetector(
+                      onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                      child: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
                         color: AppColors.textSecondary,
                         size: 20,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    _PrimaryButton(
-                      label: 'Send code',
-                      isSubmitting: _isSubmitting,
-                      onPressed: _isSubmitting ? null : _handleSendCode,
-                    ),
-                  ] else ...[
-                    const Padding(
-                      padding: EdgeInsets.only(left: 2, bottom: 8),
-                      child: Text(
-                        '6-digit code',
-                        style: TextStyle(
-                          color: AppColors.text,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    _EocTextField(
-                      controller: _codeController,
-                      focusNode: _codeFocusNode,
-                      hintText: '000000',
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      textInputAction: TextInputAction.done,
-                      style: const TextStyle(
-                        color: AppColors.text,
-                        fontSize: 22,
-                        letterSpacing: 8,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      onChanged: (val) {
-                        final cleaned = val.replaceAll(RegExp(r'[^0-9]'), '');
-                        if (cleaned != val) {
-                          _codeController.value = TextEditingValue(
-                            text: cleaned,
-                            selection: TextSelection.collapsed(offset: cleaned.length),
-                          );
-                        }
-                      },
-                      onSubmitted: (_) => _isSubmitting ? null : _handleVerifyCode(),
-                      prefixIcon: const Icon(
-                        Icons.pin_outlined,
-                        color: AppColors.textMuted,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _PrimaryButton(
-                      label: 'Verify & sign in',
-                      isSubmitting: _isSubmitting,
-                      onPressed: _isSubmitting ? null : _handleVerifyCode,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          onPressed: _isSubmitting
-                              ? null
-                              : () {
-                                  setState(() {
-                                    _step = _Step.phone;
-                                    _codeController.clear();
-                                  });
-                                },
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: const Text(
-                            'Change number',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: (_isSubmitting || _cooldown > 0)
-                              ? null
-                              : _handleSendCode,
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Text(
-                            _cooldown > 0
-                                ? 'Resend code in ${_cooldown}s'
-                                : 'Resend code',
-                            style: TextStyle(
-                              color: _cooldown > 0
-                                  ? AppColors.textMuted
-                                  : AppColors.brandNavy,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                   const SizedBox(height: 24),
+
+                  // Primary Sign In Button
+                  _PrimaryButton(
+                    label: 'Sign in',
+                    isSubmitting: _isSubmitting,
+                    onPressed: _isSubmitting ? null : _handleSignIn,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Footer Hint
                   const Text(
                     'For Drivers, EMTs, and Nurses only.\n'
                     'Contact your dispatcher if you need an account.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.textMuted,
-                      fontSize: 12,
+                      fontSize: 13,
                       height: 1.5,
                     ),
                   ),
@@ -368,26 +246,22 @@ class _EocTextField extends StatelessWidget {
   const _EocTextField({
     required this.controller,
     required this.hintText,
-    this.focusNode,
+    this.obscureText = false,
     this.keyboardType,
-    this.maxLength,
     this.textInputAction,
-    this.style,
-    this.onChanged,
     this.onSubmitted,
     this.prefixIcon,
+    this.suffixIcon,
   });
 
   final TextEditingController controller;
   final String hintText;
-  final FocusNode? focusNode;
+  final bool obscureText;
   final TextInputType? keyboardType;
-  final int? maxLength;
   final TextInputAction? textInputAction;
-  final TextStyle? style;
-  final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final Widget? prefixIcon;
+  final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -395,25 +269,19 @@ class _EocTextField extends StatelessWidget {
       height: 58,
       child: TextField(
         controller: controller,
-        focusNode: focusNode,
+        obscureText: obscureText,
         keyboardType: keyboardType,
-        maxLength: maxLength,
         textInputAction: textInputAction,
-        onChanged: onChanged,
         onSubmitted: onSubmitted,
-        style: style ??
-            const TextStyle(
-              color: AppColors.text,
-              fontSize: 15,
-            ),
+        style: const TextStyle(
+          color: AppColors.text,
+          fontSize: 15,
+        ),
         decoration: InputDecoration(
-          counterText: '',
           hintText: hintText,
-          hintStyle: TextStyle(
+          hintStyle: const TextStyle(
             color: AppColors.textMuted,
-            fontSize: style?.fontSize ?? 15,
-            letterSpacing: 0,
-            fontWeight: FontWeight.normal,
+            fontSize: 15,
           ),
           filled: true,
           fillColor: AppColors.inputBg,
@@ -425,6 +293,13 @@ class _EocTextField extends StatelessWidget {
                 )
               : null,
           prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+          suffixIcon: suffixIcon != null
+              ? Padding(
+                  padding: const EdgeInsets.only(right: 14),
+                  child: suffixIcon,
+                )
+              : null,
+          suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
             borderSide: BorderSide.none,
@@ -435,7 +310,7 @@ class _EocTextField extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+            borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
           ),
         ),
       ),
@@ -490,4 +365,3 @@ class _PrimaryButton extends StatelessWidget {
     );
   }
 }
-

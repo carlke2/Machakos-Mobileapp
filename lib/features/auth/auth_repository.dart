@@ -10,7 +10,7 @@ class AuthResult {
     required this.token,
     required this.userId,
     required this.name,
-    required this.phone,
+    required this.email,
     required this.role,
     required this.agencyId,
   });
@@ -18,51 +18,22 @@ class AuthResult {
   final String token;
   final String userId;
   final String name;
-  final String phone;
+  final String email;
   final String role;
   final String agencyId;
 }
 
-/// OTP request payload result.
-class OtpRequestResult {
-  const OtpRequestResult({
-    required this.phone,
-    required this.expiresInSeconds,
-  });
-
-  final String phone;
-  final int expiresInSeconds;
-}
-
-/// Handles responder authentication via OTP and credential storage.
+/// Handles responder credential authentication and storage.
 class AuthRepository {
   AuthRepository();
 
   final _storage = SecureStorageService.instance;
 
-  /// Request a 6-digit OTP code to the responder's phone number.
-  Future<OtpRequestResult> requestOtp(String phone) async {
+  /// Sign in with email and password credentials.
+  Future<AuthResult> login(String email, String password) async {
     final response = await ApiClient.instance.post(
-      '/auth/otp/request',
-      data: {'phone': phone},
-    );
-
-    final body = response.data as Map<String, dynamic>;
-    final data = body['data'] as Map<String, dynamic>;
-    final phoneResp = data['phone'] as String? ?? phone;
-    final expiresInSeconds = (data['expiresInSeconds'] as num?)?.toInt() ?? 300;
-
-    return OtpRequestResult(
-      phone: phoneResp,
-      expiresInSeconds: expiresInSeconds,
-    );
-  }
-
-  /// Verify the 6-digit OTP code and complete sign-in.
-  Future<AuthResult> verifyOtp(String phone, String code) async {
-    final response = await ApiClient.instance.post(
-      '/auth/otp/verify',
-      data: {'phone': phone, 'code': code},
+      '/auth/login',
+      data: {'email': email.trim(), 'passwordRaw': password},
     );
 
     final body = response.data as Map<String, dynamic>;
@@ -83,14 +54,14 @@ class AuthRepository {
       _storage.saveUser(user),
     ]);
 
-    // Register FCM token for push notifications
+    // Register FCM push token
     NotificationService.instance.registerToken();
 
     return AuthResult(
       token: token,
       userId: user['id'] as String? ?? '',
       name: user['name'] as String? ?? '',
-      phone: user['phone'] as String? ?? phone,
+      email: user['email'] as String? ?? email,
       role: role,
       agencyId: user['agencyId'] as String? ?? '',
     );
