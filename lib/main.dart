@@ -4,7 +4,6 @@ import 'components/shared/brand_splash.dart';
 import 'core/network/api_client.dart';
 import 'core/services/notification_service.dart';
 import 'core/storage/secure_storage_service.dart';
-import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/login_screen.dart';
 import 'features/home/main_shell.dart';
