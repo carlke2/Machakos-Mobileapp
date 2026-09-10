@@ -14,8 +14,9 @@ void main() {
     );
     await tester.pump();
 
-    // Verify core login UI elements are present.
-    expect(find.text('Sign in'), findsOneWidget);
-    expect(find.text('Emergency Operations Platform'), findsOneWidget);
+    // Verify core Phone+OTP login UI elements are present.
+    expect(find.text('MCCG Emergency Operations'), findsOneWidget);
+    expect(find.text('Phone number'), findsOneWidget);
+    expect(find.text('Send code'), findsOneWidget);
   });
 }

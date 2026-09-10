@@ -40,24 +40,32 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
   @override
   void initState() {
     super.initState();
-    _preHospitalController =
-        TextEditingController(text: widget.initialPreHospital ?? '');
-    _challengesController =
-        TextEditingController(text: widget.initialChallenges ?? '');
+    _preHospitalController = TextEditingController(
+      text: widget.initialPreHospital ?? '',
+    );
+    _challengesController = TextEditingController(
+      text: widget.initialChallenges ?? '',
+    );
 
     final initialVitals = widget.initialHandoverVitals ?? {};
     _tempController = TextEditingController(
-        text: initialVitals['temperature']?.toString() ?? '');
-    _bpController =
-        TextEditingController(text: initialVitals['bp']?.toString() ?? '');
-    _spo2Controller =
-        TextEditingController(text: initialVitals['spo2']?.toString() ?? '');
+      text: initialVitals['temperature']?.toString() ?? '',
+    );
+    _bpController = TextEditingController(
+      text: initialVitals['bp']?.toString() ?? '',
+    );
+    _spo2Controller = TextEditingController(
+      text: initialVitals['spo2']?.toString() ?? '',
+    );
     _pulseController = TextEditingController(
-        text: initialVitals['pulseRate']?.toString() ?? '');
-    _gcsController =
-        TextEditingController(text: initialVitals['gcs']?.toString() ?? '');
+      text: initialVitals['pulseRate']?.toString() ?? '',
+    );
+    _gcsController = TextEditingController(
+      text: initialVitals['gcs']?.toString() ?? '',
+    );
     _rrController = TextEditingController(
-        text: initialVitals['respirationRate']?.toString() ?? '');
+      text: initialVitals['respirationRate']?.toString() ?? '',
+    );
   }
 
   @override
@@ -79,7 +87,10 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
 
     // ── Validation ──────────────────────────────────────────────────────────
     if (preHospital.isEmpty) {
-      _showSnackBar('Pre-hospital management notes are required', isError: true);
+      _showSnackBar(
+        'Pre-hospital management notes are required',
+        isError: true,
+      );
       return;
     }
 
@@ -187,7 +198,9 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                   hintText:
                       'e.g. Patient conscious, BP 120/80, O2 administered via nasal cannula at 4L/min, IV access secured...',
                   hintStyle: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 14),
+                    color: AppColors.textMuted,
+                    fontSize: 14,
+                  ),
                   filled: true,
                   fillColor: AppColors.inputBg,
                   contentPadding: const EdgeInsets.all(16),
@@ -197,13 +210,17 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
-                    borderSide:
-                        const BorderSide(color: AppColors.border, width: 1),
+                    borderSide: const BorderSide(
+                      color: AppColors.border,
+                      width: 1,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
-                    borderSide:
-                        const BorderSide(color: AppColors.accent, width: 1.5),
+                    borderSide: const BorderSide(
+                      color: AppColors.accent,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -229,7 +246,9 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                   hintText:
                       'e.g. Heavy traffic along Mombasa Road, narrow access road at scene...',
                   hintStyle: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 14),
+                    color: AppColors.textMuted,
+                    fontSize: 14,
+                  ),
                   filled: true,
                   fillColor: AppColors.inputBg,
                   contentPadding: const EdgeInsets.all(16),
@@ -239,13 +258,17 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
-                    borderSide:
-                        const BorderSide(color: AppColors.border, width: 1),
+                    borderSide: const BorderSide(
+                      color: AppColors.border,
+                      width: 1,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
-                    borderSide:
-                        const BorderSide(color: AppColors.accent, width: 1.5),
+                    borderSide: const BorderSide(
+                      color: AppColors.accent,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -257,8 +280,11 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
               // ── Handover Vitals Section ─────────────────────────────────────
               Row(
                 children: const [
-                  Icon(Icons.monitor_heart_outlined,
-                      size: 20, color: AppColors.brandNavy),
+                  Icon(
+                    Icons.monitor_heart_outlined,
+                    size: 20,
+                    color: AppColors.brandNavy,
+                  ),
                   SizedBox(width: 8),
                   Text(
                     'HANDOVER VITALS (OPTIONAL)',
@@ -286,7 +312,9 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                       controller: _tempController,
                       label: 'Temperature',
                       hint: '37.2 °C',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -356,8 +384,9 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                   onPressed: _isSubmitting ? null : _handleSubmit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.brandNavy,
-                    disabledBackgroundColor:
-                        AppColors.brandNavy.withValues(alpha: 0.6),
+                    disabledBackgroundColor: AppColors.brandNavy.withValues(
+                      alpha: 0.6,
+                    ),
                     foregroundColor: AppColors.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -413,11 +442,16 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
           style: const TextStyle(color: AppColors.text, fontSize: 14),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+            hintStyle: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 13,
+            ),
             filled: true,
             fillColor: AppColors.inputBg,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,

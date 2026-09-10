@@ -67,6 +67,52 @@ class AuthRepository {
     );
   }
 
+  /// Request a 6-digit OTP code to the responder's phone.
+  Future<void> requestOtp(String phone) async {
+    await ApiClient.instance.post(
+      '/auth/otp/request',
+      data: {'phone': phone.trim()},
+    );
+  }
+
+  /// Verify OTP code and save session.
+  Future<AuthResult> verifyOtp(String phone, String code) async {
+    final response = await ApiClient.instance.post(
+      '/auth/otp/verify',
+      data: {'phone': phone.trim(), 'code': code.trim()},
+    );
+
+    final body = response.data as Map<String, dynamic>;
+    final data = body['data'] as Map<String, dynamic>;
+    final token = data['token'] as String;
+    final user = data['user'] as Map<String, dynamic>;
+    final role = user['role'] as String? ?? '';
+
+    if (!_allowedRoles.contains(role)) {
+      await _storage.clearAll();
+      throw const ApiException(
+        'This app is for field responders only (Driver, EMT, Nurse).',
+      );
+    }
+
+    await Future.wait([
+      _storage.saveToken(token),
+      _storage.saveUser(user),
+    ]);
+
+    // Register FCM push token
+    NotificationService.instance.registerToken();
+
+    return AuthResult(
+      token: token,
+      userId: user['id'] as String? ?? '',
+      name: user['name'] as String? ?? '',
+      email: user['email'] as String? ?? '',
+      role: role,
+      agencyId: user['agencyId'] as String? ?? '',
+    );
+  }
+
   Future<void> logout() async {
     await NotificationService.instance.clearToken();
     await _storage.clearAll();
