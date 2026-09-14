@@ -188,11 +188,27 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Machakos County logo: height 46, width auto — matches frontend
-          Image.asset(
-            'assets/images/logo_splash_circle.png',
-            height: 46,
-            fit: BoxFit.contain,
+          // Machakos County logo: landscape format (crest + text), height 40
+          // Uses machakos_logo.jpg — same source as the web frontend's nccg.jpg.
+          // The old logo_splash_circle.png had heavy white padding which made it
+          // appear tiny at any fixed height.
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 40, maxWidth: 200),
+              child: Image.asset(
+                'assets/images/machakos_logo.jpg',
+                height: 40,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Text(
+                  'Machakos County',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1B3A5C),
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
           ),
           // Gap 22px + 1px divider (40px tall, #E3E8E5) + gap 22px
           // matches frontend: gap: 22px and .login-cobrand-div

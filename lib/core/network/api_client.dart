@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import '../config/app_config.dart';
 import '../storage/secure_storage_service.dart';
 import 'socket_service.dart';
-import '../../main.dart' show navigatorKey;
-import '../../features/auth/login_screen.dart';
+
+// ---------------------------------------------------------------------------
+// ApiException — public error surface for all callers.
+// ---------------------------------------------------------------------------
 
 class ApiException implements Exception {
   const ApiException(this.message);
@@ -14,66 +17,52 @@ class ApiException implements Exception {
   String toString() => 'ApiException: $message';
 }
 
-const List<String> _candidateBaseUrls = [
-  'http://192.168.100.12:3000',  // current active LAN IP (physical devices)
-  'http://192.168.100.157:3000', // previous LAN IP
-  'http://10.0.2.2:3000',        // Android emulator → host loopback
-  'http://127.0.0.1:3000',
-  'http://localhost:3000',
-];
-
-const _probeTimeout = Duration(milliseconds: 1500);
+// ---------------------------------------------------------------------------
+// ApiClient — lazy singleton, no async readiness step.
+// ---------------------------------------------------------------------------
 
 class ApiClient {
-  ApiClient._();
-
-  static ApiClient? _instance;
-  static Completer<String>? _readyCompleter;
-
-  static ApiClient get instance {
-    if (_instance == null) {
-      _instance = ApiClient._().._setUp(_candidateBaseUrls.first);
-      ensureReady();
-    }
-    return _instance!;
+  ApiClient._() {
+    _setUp();
   }
+
+  // ── Singleton ─────────────────────────────────────────────────────────────
+
+  static final ApiClient instance = ApiClient._();
+
+  // ── Forced-logout signal ──────────────────────────────────────────────────
+  //
+  // Emits `true` whenever a 401 on a non-auth endpoint triggers a forced
+  // logout.  Wire this up in your widget tree (e.g. in MccgEocApp.initState
+  // or via a listener added immediately after runApp) to navigate to the
+  // login screen:
+  //
+  //   ApiClient.instance.onForcedLogout.addListener(() {
+  //     if (ApiClient.instance.onForcedLogout.value) {
+  //       navigatorKey.currentState?.pushAndRemoveUntil(
+  //         MaterialPageRoute(builder: (_) => const LoginScreen()),
+  //         (_) => false,
+  //       );
+  //       ApiClient.instance.onForcedLogout.value = false; // reset
+  //     }
+  //   });
+  //
+  final ValueNotifier<bool> onForcedLogout = ValueNotifier(false);
+
+  // ── Internal state ────────────────────────────────────────────────────────
 
   late final Dio _dio;
-  late String baseUrl;
+
+  /// The resolved base URL — read from [AppConfig.apiUrl].
+  /// Kept as a public field so [SocketService] and [HistoryRepository] can
+  /// continue to read it without needing their own imports of AppConfig.
+  final String baseUrl = AppConfig.apiUrl;
+
   static bool _isLoggingOut = false;
 
-  /// Ensures base URL probe is completed. Safe to call non-blocking at startup.
-  static Future<String> ensureReady() {
-    if (_readyCompleter != null) return _readyCompleter!.future;
-    final completer = Completer<String>();
-    _readyCompleter = completer;
+  // ── Setup ─────────────────────────────────────────────────────────────────
 
-    _probeBaseUrl().then((url) {
-      final winningUrl = url ?? _candidateBaseUrls.first;
-      debugPrint('[ApiClient] Configured active base URL: $winningUrl');
-      if (_instance != null) {
-        _instance!.baseUrl = winningUrl;
-        _instance!._dio.options.baseUrl = winningUrl;
-      }
-      completer.complete(winningUrl);
-    }).catchError((e) {
-      final fallback = _candidateBaseUrls.first;
-      if (_instance != null) {
-        _instance!.baseUrl = fallback;
-        _instance!._dio.options.baseUrl = fallback;
-      }
-      completer.complete(fallback);
-    });
-
-    return completer.future;
-  }
-
-  static Future<void> init() async {
-    await ensureReady();
-  }
-
-  void _setUp(String url) {
-    baseUrl = url;
+  void _setUp() {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 10),
@@ -82,8 +71,6 @@ class ApiClient {
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        await ensureReady();
-        options.baseUrl = baseUrl;
         final token = await SecureStorageService.instance.getToken();
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
@@ -100,11 +87,10 @@ class ApiClient {
           }
 
           final data = response.data;
-          String msg;
+          final String msg;
           if (data is Map<String, dynamic> && data['error'] is String) {
             msg = data['error'] as String;
-          } else if (data is Map<String, dynamic> &&
-              data['message'] is String) {
+          } else if (data is Map<String, dynamic> && data['message'] is String) {
             msg = data['message'] as String;
           } else {
             msg = 'Server error (${response.statusCode})';
@@ -131,115 +117,78 @@ class ApiClient {
     ));
   }
 
-  static Future<void> _forceLogout() async {
+  // ── Forced logout (no navigation — emits onForcedLogout) ──────────────────
+
+  Future<void> _forceLogout() async {
     if (_isLoggingOut) return;
     _isLoggingOut = true;
-
     try {
       SocketService.instance.disconnect();
       await SecureStorageService.instance.clearAll();
-      navigatorKey.currentState?.pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
-        (_) => false,
-      );
+      // Signal the UI layer — whoever is listening navigates to login.
+      onForcedLogout.value = true;
     } finally {
       _isLoggingOut = false;
     }
   }
+
+  // ── Private request helper — single try/catch for all verbs ───────────────
+
+  Future<Response<dynamic>> _request(
+    Future<Response<dynamic>> Function() call,
+  ) async {
+    try {
+      return await call();
+    } on DioException catch (e) {
+      throw e.error is ApiException
+          ? e.error as ApiException
+          : ApiException(e.message ?? 'Unknown error');
+    }
+  }
+
+  // ── Public HTTP verbs ─────────────────────────────────────────────────────
+
+  Future<Response<dynamic>> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) =>
+      _request(() => _dio.get(path,
+          queryParameters: queryParameters, options: options));
 
   Future<Response<dynamic>> post(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
-  }) async {
-    try {
-      return await _dio.post(path,
-          data: data, queryParameters: queryParameters, options: options);
-    } on DioException catch (e) {
-      throw e.error is ApiException
-          ? e.error as ApiException
-          : ApiException(e.message ?? 'Unknown error');
-    }
-  }
+  }) =>
+      _request(() => _dio.post(path,
+          data: data, queryParameters: queryParameters, options: options));
 
-  Future<Response<dynamic>> get(
-    String path, {
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-  }) async {
-    try {
-      return await _dio.get(path, queryParameters: queryParameters, options: options);
-    } on DioException catch (e) {
-      throw e.error is ApiException
-          ? e.error as ApiException
-          : ApiException(e.message ?? 'Unknown error');
-    }
-  }
-
-  Future<Response<dynamic>> delete(
+  Future<Response<dynamic>> put(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
-  }) async {
-    try {
-      return await _dio.delete(path,
-          data: data, queryParameters: queryParameters, options: options);
-    } on DioException catch (e) {
-      throw e.error is ApiException
-          ? e.error as ApiException
-          : ApiException(e.message ?? 'Unknown error');
-    }
-  }
+  }) =>
+      _request(() => _dio.put(path,
+          data: data, queryParameters: queryParameters, options: options));
 
   Future<Response<dynamic>> patch(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
-  }) async {
-    try {
-      return await _dio.patch(path,
-          data: data, queryParameters: queryParameters, options: options);
-    } on DioException catch (e) {
-      throw e.error is ApiException
-          ? e.error as ApiException
-          : ApiException(e.message ?? 'Unknown error');
-    }
-  }
-}
+  }) =>
+      _request(() => _dio.patch(path,
+          data: data, queryParameters: queryParameters, options: options));
 
-Future<String?> _probeBaseUrl() async {
-  final completer = Completer<String?>();
-  int remaining = _candidateBaseUrls.length;
-
-  for (final url in _candidateBaseUrls) {
-    debugPrint('[ApiClient] Probing $url ...');
-    final probe = Dio(BaseOptions(
-      connectTimeout: _probeTimeout,
-      receiveTimeout: _probeTimeout,
-      validateStatus: (status) => status != null && status < 500,
-    ));
-
-    probe.get('$url/').then((res) {
-      if (!completer.isCompleted && res.statusCode != null && res.statusCode! < 500) {
-        debugPrint('[ApiClient] Probe SUCCESS for $url (${res.statusCode})');
-        completer.complete(url);
-      } else {
-        remaining--;
-        if (remaining == 0 && !completer.isCompleted) {
-          completer.complete(null);
-        }
-      }
-    }).catchError((e) {
-      debugPrint('[ApiClient] Probe failed for $url: $e');
-      remaining--;
-      if (remaining == 0 && !completer.isCompleted) {
-        completer.complete(null);
-      }
-    });
-  }
-
-  return completer.future;
+  Future<Response<dynamic>> delete(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) =>
+      _request(() => _dio.delete(path,
+          data: data, queryParameters: queryParameters, options: options));
 }
