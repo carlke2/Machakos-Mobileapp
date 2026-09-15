@@ -262,97 +262,102 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        onTap: () {
-          Navigator.of(context).push<void>(
-            MaterialPageRoute(
-              builder: (_) => PcrViewerScreen(task: task),
-            ),
-          );
-        },
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              task.caseNumber,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          onTap: () {
+            Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => PcrViewerScreen(task: task),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                task.status,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 10,
+            );
+          },
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                task.caseNumber,
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
                 ),
               ),
-            ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (displayDate.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.access_time, size: 12, color: AppColors.textMuted),
-                  const SizedBox(width: 4),
-                  Text(
-                    displayDate,
-                    style: const TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 12,
-                    ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  task.status,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
                   ),
-                ],
+                ),
               ),
             ],
-            const SizedBox(height: 6),
-            Text(
-              task.chiefComplaint,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (task.pcrCount > 0) ...[
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (displayDate.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.access_time, size: 12, color: AppColors.textMuted),
+                    const SizedBox(width: 4),
+                    Text(
+                      displayDate,
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Icon(Icons.insert_drive_file_outlined,
-                      size: 13, color: AppColors.primary),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${task.pcrCount} PCR file${task.pcrCount > 1 ? 's' : ''} attached',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+              Text(
+                task.chiefComplaint,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
+              if (task.pcrCount > 0) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.insert_drive_file_outlined,
+                        size: 13, color: AppColors.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${task.pcrCount} PCR file${task.pcrCount > 1 ? 's' : ''} attached',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
-        ),
-        trailing: const Icon(
-          Icons.chevron_right,
-          color: AppColors.textMuted,
-          size: 20,
+          ),
+          trailing: const Icon(
+            Icons.chevron_right,
+            color: AppColors.textMuted,
+            size: 20,
+          ),
         ),
       ),
     );

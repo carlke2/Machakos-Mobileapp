@@ -238,49 +238,52 @@ class _CrewScreenState extends State<CrewScreen> {
                                       ? active.currentEmt?.id == member.id
                                       : active.currentNurse?.id == member.id;
 
-                                  return ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                                    leading: CircleAvatar(
-                                      backgroundColor: isCurrentSlot
-                                          ? AppColors.primary.withValues(alpha: 0.15)
-                                          : AppColors.inputBg,
-                                      child: Text(
-                                        member.name.substring(0, 1).toUpperCase(),
-                                        style: TextStyle(
-                                          color: isCurrentSlot ? AppColors.primary : AppColors.text,
-                                          fontWeight: FontWeight.bold,
+                                  return Material(
+                                    color: Colors.transparent,
+                                    child: ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                      leading: CircleAvatar(
+                                        backgroundColor: isCurrentSlot
+                                            ? AppColors.primary.withValues(alpha: 0.15)
+                                            : AppColors.inputBg,
+                                        child: Text(
+                                          member.name.substring(0, 1).toUpperCase(),
+                                          style: TextStyle(
+                                            color: isCurrentSlot ? AppColors.primary : AppColors.text,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    title: Text(
-                                      member.name,
-                                      style: TextStyle(
-                                        color: isOtherSlot ? AppColors.textMuted : AppColors.text,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 15,
+                                      title: Text(
+                                        member.name,
+                                        style: TextStyle(
+                                          color: isOtherSlot ? AppColors.textMuted : AppColors.text,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                        ),
                                       ),
-                                    ),
-                                    subtitle: Text(
-                                      isOtherSlot
-                                          ? 'Assigned as ${targetRole.toUpperCase() == 'EMT' ? 'Nurse' : 'EMT'}'
-                                          : (member.phone ?? 'No phone listed'),
-                                      style: TextStyle(
-                                        color: isOtherSlot ? AppColors.danger : AppColors.textSecondary,
-                                        fontSize: 12,
+                                      subtitle: Text(
+                                        isOtherSlot
+                                            ? 'Assigned as ${targetRole.toUpperCase() == 'EMT' ? 'Nurse' : 'EMT'}'
+                                            : (member.phone ?? 'No phone listed'),
+                                        style: TextStyle(
+                                          color: isOtherSlot ? AppColors.danger : AppColors.textSecondary,
+                                          fontSize: 12,
+                                        ),
                                       ),
+                                      trailing: isCurrentSlot
+                                          ? const Icon(Icons.check_circle, color: AppColors.primary, size: 20)
+                                          : isOtherSlot
+                                              ? null
+                                              : const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
+                                      enabled: !isOtherSlot,
+                                      onTap: isOtherSlot
+                                          ? null
+                                          : () {
+                                              Navigator.of(ctx).pop();
+                                              _assignCrewMember(targetRole, member.id);
+                                            },
                                     ),
-                                    trailing: isCurrentSlot
-                                        ? const Icon(Icons.check_circle, color: AppColors.primary, size: 20)
-                                        : isOtherSlot
-                                            ? null
-                                            : const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
-                                    enabled: !isOtherSlot,
-                                    onTap: isOtherSlot
-                                        ? null
-                                        : () {
-                                            Navigator.of(ctx).pop();
-                                            _assignCrewMember(targetRole, member.id);
-                                          },
                                   );
                                 },
                               ),
@@ -903,51 +906,42 @@ class _CrewScreenState extends State<CrewScreen> {
                       final vehicle = _vehicles[index];
                       final isSelected = _selectedVehicle?.id == vehicle.id;
 
-                      return ListTile(
-                        onTap: () => _onVehicleTap(vehicle),
-                        selected: isSelected,
-                        selectedTileColor: AppColors.primary.withValues(alpha: 0.05),
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.inputBg,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.local_hospital_outlined,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
-                        ),
-                        title: Text(
-                          vehicle.registrationNumber,
-                          style: const TextStyle(
-                            color: AppColors.text,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        subtitle: Text(
-                          vehicle.lastLocationName ?? 'Status: ${vehicle.status}',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.inputBg,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            vehicle.status,
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                      return Material(
+                        color: Colors.transparent,
+                        child: ListTile(
+                          onTap: () => _onVehicleTap(vehicle),
+                          selected: isSelected,
+                          selectedTileColor: AppColors.primary.withValues(alpha: 0.05),
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.inputBg,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.local_hospital_outlined,
+                              color: AppColors.primary,
+                              size: 20,
                             ),
                           ),
+                          title: Text(
+                            vehicle.registrationNumber,
+                            style: const TextStyle(
+                              color: AppColors.text,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          subtitle: Text(
+                            vehicle.lastLocationName ?? 'Status: ${vehicle.status}',
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                          trailing: isSelected
+                              ? const Icon(Icons.radio_button_checked, color: AppColors.primary, size: 20)
+                              : const Icon(Icons.radio_button_unchecked, color: AppColors.textMuted, size: 20),
                         ),
                       );
                     },
