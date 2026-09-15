@@ -63,58 +63,64 @@ class ApiClient {
   // ── Setup ─────────────────────────────────────────────────────────────────
 
   void _setUp() {
-    _dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 15),
+      ),
+    );
 
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = await SecureStorageService.instance.getToken();
-        if (token != null && token.isNotEmpty) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        return handler.next(options);
-      },
-      onError: (DioException e, handler) {
-        final response = e.response;
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await SecureStorageService.instance.getToken();
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+        onError: (DioException e, handler) {
+          final response = e.response;
 
-        if (response != null) {
-          final isAuthEndpoint = e.requestOptions.path.contains('/auth/');
-          if (response.statusCode == 401 && !isAuthEndpoint) {
-            _forceLogout();
+          if (response != null) {
+            final isAuthEndpoint = e.requestOptions.path.contains('/auth/');
+            if (response.statusCode == 401 && !isAuthEndpoint) {
+              _forceLogout();
+            }
+
+            final data = response.data;
+            final String msg;
+            if (data is Map<String, dynamic> && data['error'] is String) {
+              msg = data['error'] as String;
+            } else if (data is Map<String, dynamic> &&
+                data['message'] is String) {
+              msg = data['message'] as String;
+            } else {
+              msg = 'Server error (${response.statusCode})';
+            }
+            return handler.reject(
+              DioException(
+                requestOptions: e.requestOptions,
+                error: ApiException(msg),
+                type: DioExceptionType.badResponse,
+                response: response,
+              ),
+            );
           }
 
-          final data = response.data;
-          final String msg;
-          if (data is Map<String, dynamic> && data['error'] is String) {
-            msg = data['error'] as String;
-          } else if (data is Map<String, dynamic> && data['message'] is String) {
-            msg = data['message'] as String;
-          } else {
-            msg = 'Server error (${response.statusCode})';
-          }
           return handler.reject(
             DioException(
               requestOptions: e.requestOptions,
-              error: ApiException(msg),
-              type: DioExceptionType.badResponse,
-              response: response,
+              error: ApiException(
+                'Could not reach the server at $baseUrl. Check network/ADB connection.',
+              ),
+              type: e.type,
             ),
           );
-        }
-
-        return handler.reject(
-          DioException(
-            requestOptions: e.requestOptions,
-            error: ApiException(
-                'Could not reach the server at $baseUrl. Check network/ADB connection.'),
-            type: e.type,
-          ),
-        );
-      },
-    ));
+        },
+      ),
+    );
   }
 
   // ── Forced logout (no navigation — emits onForcedLogout) ──────────────────
@@ -152,43 +158,63 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
     Options? options,
-  }) =>
-      _request(() => _dio.get(path,
-          queryParameters: queryParameters, options: options));
+  }) => _request(
+    () => _dio.get(path, queryParameters: queryParameters, options: options),
+  );
 
   Future<Response<dynamic>> post(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
-  }) =>
-      _request(() => _dio.post(path,
-          data: data, queryParameters: queryParameters, options: options));
+  }) => _request(
+    () => _dio.post(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+    ),
+  );
 
   Future<Response<dynamic>> put(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
-  }) =>
-      _request(() => _dio.put(path,
-          data: data, queryParameters: queryParameters, options: options));
+  }) => _request(
+    () => _dio.put(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+    ),
+  );
 
   Future<Response<dynamic>> patch(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
-  }) =>
-      _request(() => _dio.patch(path,
-          data: data, queryParameters: queryParameters, options: options));
+  }) => _request(
+    () => _dio.patch(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+    ),
+  );
 
   Future<Response<dynamic>> delete(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
-  }) =>
-      _request(() => _dio.delete(path,
-          data: data, queryParameters: queryParameters, options: options));
+  }) => _request(
+    () => _dio.delete(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+    ),
+  );
 }
