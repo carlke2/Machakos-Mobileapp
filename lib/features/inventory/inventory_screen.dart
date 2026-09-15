@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobileapp/core/network/api_client.dart';
 import 'package:mobileapp/core/theme/app_colors.dart';
+import 'package:mobileapp/features/crew/crew_repository.dart';
+import 'package:mobileapp/features/crew/models.dart';
 import 'inventory_models.dart';
 import 'inventory_repository.dart';
 
@@ -9,7 +11,14 @@ import 'inventory_repository.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class InventoryScreen extends StatelessWidget {
-  const InventoryScreen({super.key});
+  const InventoryScreen({
+    super.key,
+    this.inventoryRepository = const InventoryRepository(),
+    this.crewRepository = const CrewRepository(),
+  });
+
+  final InventoryRepository inventoryRepository;
+  final CrewRepository crewRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -34,10 +43,15 @@ class InventoryScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
-            _StockTab(),
-            _MyStockTab(),
+            _StockTab(
+              repo: inventoryRepository,
+              crewRepo: crewRepository,
+            ),
+            _MyStockTab(
+              repo: inventoryRepository,
+            ),
           ],
         ),
       ),
@@ -90,7 +104,13 @@ IconData _categoryIcon(String category) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _StockTab extends StatefulWidget {
-  const _StockTab();
+  const _StockTab({
+    this.repo = const InventoryRepository(),
+    this.crewRepo = const CrewRepository(),
+  });
+
+  final InventoryRepository repo;
+  final CrewRepository crewRepo;
 
   @override
   State<_StockTab> createState() => _StockTabState();
@@ -112,12 +132,15 @@ class _StockProductItem extends _StockListItem {
 
 class _StockTabState extends State<_StockTab>
     with AutomaticKeepAliveClientMixin {
-  final _repo = const InventoryRepository();
+  InventoryRepository get _repo => widget.repo;
+  CrewRepository get _crewRepo => widget.crewRepo;
 
   bool _loading = true;
   String? _error;
   List<InventoryItem> _items = [];
   List<_StockListItem> _flatList = [];
+
+  CheckInStatus? _activeCheckIn;
 
   /// itemId → CartLine (local cart, not yet sent to the API).
   final Map<String, CartLine> _cart = {};
@@ -139,7 +162,14 @@ class _StockTabState extends State<_StockTab>
       _error = null;
     });
     try {
-      final items = await _repo.listAvailable();
+      final results = await Future.wait([
+        _repo.listAvailable(),
+        _crewRepo.getMyCheckIn().catchError((_) => null),
+      ]);
+
+      final items = results[0] as List<InventoryItem>;
+      final checkIn = results[1] as CheckInStatus?;
+
       if (mounted) {
         final grouped = <String, List<InventoryItem>>{};
         for (final item in items) {
@@ -155,6 +185,7 @@ class _StockTabState extends State<_StockTab>
         setState(() {
           _items = items;
           _flatList = flat;
+          _activeCheckIn = checkIn;
         });
       }
     } on ApiException catch (e) {
@@ -188,6 +219,19 @@ class _StockTabState extends State<_StockTab>
 
   Future<void> _checkout() async {
     if (_cart.isEmpty) return;
+
+    if (_activeCheckIn == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Vehicle Check-in Required: Please check in to an ambulance on the Crew tab before drawing stock.',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() => _checkingOut = true);
     try {
       await _repo.checkout(_cart.values.toList());
@@ -238,32 +282,109 @@ class _StockTabState extends State<_StockTab>
       return _ErrorView(message: _error!, onRetry: _load);
     }
 
-    if (_items.isEmpty) {
-      return const _EmptyView(message: 'No inventory items found');
-    }
-
     return Stack(
       children: [
-        RefreshIndicator(
-          onRefresh: _load,
-          child: ListView.builder(
-            padding: const EdgeInsets.only(bottom: 96),
-            itemCount: _flatList.length,
-            itemBuilder: (context, i) {
-              final listItem = _flatList[i];
-              if (listItem is _StockHeaderItem) {
-                return _CategoryHeader(category: listItem.category);
-              } else if (listItem is _StockProductItem) {
-                final item = listItem.item;
-                return _StockItemRow(
-                  item: item,
-                  cartQty: _cart[item.id]?.quantity ?? 0,
-                  onSetQty: _setQty,
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
+        Column(
+          children: [
+            // Vehicle Check-in Guard or Active Vehicle Banner
+            if (_activeCheckIn == null)
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        color: Colors.orange.shade800, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Vehicle Check-in Required',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: Colors.orange.shade900,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'You must check in to an ambulance on the Crew tab before checking out stock.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.orange.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.airport_shuttle,
+                        color: AppColors.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Active Ambulance: ${_activeCheckIn!.registrationNumber}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.check_circle,
+                        color: AppColors.primary, size: 16),
+                  ],
+                ),
+              ),
+
+            Expanded(
+              child: _items.isEmpty
+                  ? const _EmptyView(message: 'No inventory items found')
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 96),
+                        itemCount: _flatList.length,
+                        itemBuilder: (context, i) {
+                          final listItem = _flatList[i];
+                          if (listItem is _StockHeaderItem) {
+                            return _CategoryHeader(category: listItem.category);
+                          } else if (listItem is _StockProductItem) {
+                            final item = listItem.item;
+                            return _StockItemRow(
+                              item: item,
+                              cartQty: _cart[item.id]?.quantity ?? 0,
+                              onSetQty: _setQty,
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+            ),
+          ],
         ),
 
         // Floating Checkout button
@@ -437,7 +558,11 @@ class _StockItemRow extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _MyStockTab extends StatefulWidget {
-  const _MyStockTab();
+  const _MyStockTab({
+    this.repo = const InventoryRepository(),
+  });
+
+  final InventoryRepository repo;
 
   @override
   State<_MyStockTab> createState() => _MyStockTabState();
@@ -445,7 +570,7 @@ class _MyStockTab extends StatefulWidget {
 
 class _MyStockTabState extends State<_MyStockTab>
     with AutomaticKeepAliveClientMixin {
-  final _repo = const InventoryRepository();
+  InventoryRepository get _repo => widget.repo;
 
   bool _loading = true;
   String? _error;
