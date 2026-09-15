@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mobileapp/core/network/api_client.dart';
+import 'package:mobileapp/core/network/socket_service.dart';
+import 'package:mobileapp/core/services/notification_service.dart';
+import 'package:mobileapp/core/storage/secure_storage_service.dart';
 import 'package:mobileapp/core/theme/app_colors.dart';
+import 'package:mobileapp/features/auth/login_screen.dart';
 import 'package:mobileapp/features/crew/crew_repository.dart';
 import 'package:mobileapp/features/crew/models.dart';
 import 'inventory_models.dart';
@@ -20,6 +24,42 @@ class InventoryScreen extends StatelessWidget {
   final InventoryRepository inventoryRepository;
   final CrewRepository crewRepository;
 
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log Out'),
+        content: const Text('Are you sure you want to log out of Machakos EOC?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: AppColors.onPrimary,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      SocketService.instance.disconnect();
+      await NotificationService.instance.clearToken();
+      await SecureStorageService.instance.clearAll();
+      if (!context.mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+        (_) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -33,6 +73,13 @@ class InventoryScreen extends StatelessWidget {
             'Inventory',
             style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout_outlined, size: 20),
+              tooltip: 'Log out',
+              onPressed: () => _confirmLogout(context),
+            ),
+          ],
           bottom: const TabBar(
             indicatorColor: AppColors.accent,
             labelColor: AppColors.onPrimary,

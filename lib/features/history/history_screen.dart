@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mobileapp/core/network/api_client.dart';
+import 'package:mobileapp/core/network/socket_service.dart';
+import 'package:mobileapp/core/services/notification_service.dart';
+import 'package:mobileapp/core/storage/secure_storage_service.dart';
 import 'package:mobileapp/core/theme/app_colors.dart';
+import 'package:mobileapp/features/auth/login_screen.dart';
 import 'history_repository.dart';
 import 'models.dart';
 import 'pcr_viewer_screen.dart';
@@ -24,6 +28,42 @@ class _HistoryScreenState extends State<HistoryScreen> {
   int _totalPages = 1;
   int _totalCount = 0;
   final List<HistoryTask> _tasks = [];
+
+  Future<void> _handleLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log Out'),
+        content: const Text('Are you sure you want to log out of Machakos EOC?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: AppColors.onPrimary,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      SocketService.instance.disconnect();
+      await NotificationService.instance.clearToken();
+      await SecureStorageService.instance.clearAll();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+        (_) => false,
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -153,6 +193,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
           _totalCount > 0 ? 'Assignment History ($_totalCount)' : 'Assignment History',
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_outlined, size: 20),
+            tooltip: 'Log out',
+            onPressed: _handleLogout,
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(
