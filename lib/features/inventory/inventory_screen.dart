@@ -302,11 +302,11 @@ class _StockTabState extends State<_StockTab>
           backgroundColor: AppColors.danger,
         ),
       );
-    } catch (_) {
+    } catch (err) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Checkout failed. Please try again.'),
+        SnackBar(
+          content: Text('Checkout failed: ${err.toString().replaceAll("Exception: ", "")}'),
           backgroundColor: AppColors.danger,
         ),
       );
