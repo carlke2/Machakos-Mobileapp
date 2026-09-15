@@ -46,13 +46,13 @@ class InventoryItem {
   bool get isLowStock => quantityStock <= reorderLevel;
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) => InventoryItem(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        category: json['category'] as String,
-        unit: json['unit'] as String? ?? 'each',
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? 'Unnamed Item',
+        category: json['category']?.toString() ?? 'MEDICAL',
+        unit: json['unit']?.toString() ?? 'each',
         quantityStock: (json['quantityStock'] as num?)?.toInt() ?? 0,
         reorderLevel: (json['reorderLevel'] as num?)?.toInt() ?? 0,
-        notes: json['notes'] as String?,
+        notes: json['notes']?.toString(),
         isActive: json['isActive'] as bool? ?? true,
       );
 }
@@ -72,10 +72,10 @@ class CheckoutUser {
   final String name;
   final String role;
 
-  factory CheckoutUser.fromJson(Map<String, dynamic> json) => CheckoutUser(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        role: json['role'] as String,
+  factory CheckoutUser.fromJson(Map<String, dynamic>? json) => CheckoutUser(
+        id: json?['id']?.toString() ?? '',
+        name: json?['name']?.toString() ?? 'Responder',
+        role: json?['role']?.toString() ?? 'CREW',
       );
 }
 
@@ -120,14 +120,24 @@ class InventoryCheckout {
 
   factory InventoryCheckout.fromJson(Map<String, dynamic> json) =>
       InventoryCheckout(
-        id: json['id'] as String,
-        quantity: (json['quantity'] as num).toInt(),
+        id: json['id']?.toString() ?? '',
+        quantity: (json['quantity'] as num?)?.toInt() ?? 0,
         returnedQuantity: (json['returnedQuantity'] as num?)?.toInt() ?? 0,
-        status: json['status'] as String? ?? 'CHECKED_OUT',
-        checkedOutAt: json['checkedOutAt'] as String,
-        returnedAt: json['returnedAt'] as String?,
-        item: InventoryItem.fromJson(json['item'] as Map<String, dynamic>),
-        user: CheckoutUser.fromJson(json['user'] as Map<String, dynamic>),
+        status: json['status']?.toString() ?? 'CHECKED_OUT',
+        checkedOutAt: json['checkedOutAt']?.toString() ?? DateTime.now().toIso8601String(),
+        returnedAt: json['returnedAt']?.toString(),
+        item: json['item'] is Map<String, dynamic>
+            ? InventoryItem.fromJson(json['item'] as Map<String, dynamic>)
+            : const InventoryItem(
+                id: '',
+                name: 'Item',
+                category: 'MEDICAL',
+                unit: 'each',
+                quantityStock: 0,
+                reorderLevel: 0,
+                isActive: true,
+              ),
+        user: CheckoutUser.fromJson(json['user'] as Map<String, dynamic>?),
       );
 }
 
