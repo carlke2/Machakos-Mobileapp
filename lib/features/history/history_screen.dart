@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mobileapp/core/network/api_client.dart';
 import 'package:mobileapp/core/network/socket_service.dart';
-import 'package:mobileapp/core/services/notification_service.dart';
 import 'package:mobileapp/core/storage/secure_storage_service.dart';
 import 'package:mobileapp/core/theme/app_colors.dart';
 import 'package:mobileapp/features/auth/login_screen.dart';
+import 'package:mobileapp/features/notifications/push_service.dart';
 import 'history_repository.dart';
 import 'models.dart';
 import 'pcr_viewer_screen.dart';
@@ -55,7 +55,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     if (confirm == true) {
       SocketService.instance.disconnect();
-      await NotificationService.instance.clearToken();
+      await PushService.instance.unregister();
       await SecureStorageService.instance.clearAll();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(

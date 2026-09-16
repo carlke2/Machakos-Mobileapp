@@ -53,6 +53,9 @@ class ApiClient {
 
   late final Dio _dio;
 
+  /// Returns the underlying [Dio] instance for service modules.
+  Dio get dio => _dio;
+
   /// The resolved base URL — read from [AppConfig.apiUrl].
   /// Kept as a public field so [SocketService] and [HistoryRepository] can
   /// continue to read it without needing their own imports of AppConfig.

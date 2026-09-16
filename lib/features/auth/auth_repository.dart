@@ -1,6 +1,7 @@
 import 'package:mobileapp/core/network/api_client.dart';
-import 'package:mobileapp/core/services/notification_service.dart';
 import 'package:mobileapp/core/storage/secure_storage_service.dart';
+import 'package:mobileapp/features/notifications/notifications_api.dart';
+import 'package:mobileapp/features/notifications/push_service.dart';
 
 const _allowedRoles = {'DRIVER', 'EMT', 'NURSE'};
 
@@ -54,8 +55,9 @@ class AuthRepository {
       _storage.saveUser(user),
     ]);
 
-    // Register FCM push token
-    NotificationService.instance.registerToken();
+    // Register FCM push token & initialize PushService
+    final api = NotificationsApi(ApiClient.instance.dio);
+    PushService.instance.initialize(api);
 
     return AuthResult(
       token: token,
@@ -100,8 +102,9 @@ class AuthRepository {
       _storage.saveUser(user),
     ]);
 
-    // Register FCM push token
-    NotificationService.instance.registerToken();
+    // Register FCM push token & initialize PushService
+    final api = NotificationsApi(ApiClient.instance.dio);
+    PushService.instance.initialize(api);
 
     return AuthResult(
       token: token,
@@ -114,8 +117,9 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
-    await NotificationService.instance.clearToken();
+    await PushService.instance.unregister();
     await _storage.clearAll();
   }
 }
+
 

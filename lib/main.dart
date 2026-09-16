@@ -1,16 +1,23 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'core/network/api_client.dart';
-import 'core/services/notification_service.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/login_screen.dart';
 import 'features/home/main_shell.dart';
+import 'features/notifications/models.dart';
+import 'features/notifications/notifications_api.dart';
+import 'features/notifications/push_service.dart';
 
 /// Global navigator key — passed to [MaterialApp] so the [ApiClient]
 /// forced-logout listener can navigate without a BuildContext.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+/// A deep link that arrived before the Navigator was mounted. Cold-start
+/// taps race MaterialApp's build — buffer instead of dropping.
+PushDataPayload? _pendingDeepLink;
 
 const _allowedRoles = {'DRIVER', 'EMT', 'NURSE'};
 
@@ -18,12 +25,12 @@ Future<void> main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Non-blocking Firebase + FCM init:
-  Firebase.initializeApp().then((_) {
-    NotificationService.instance.initialize();
-  }).catchError((e) {
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  } catch (e) {
     debugPrint('[main] Firebase initialization error: $e');
-  });
+  }
 
   // Fast offline auth resolution (~15-30ms) directly behind preserved native splash:
   final initialHome = await _resolveInitialScreen();
@@ -31,10 +38,6 @@ Future<void> main() async {
   runApp(MccgEocApp(initialHome: initialHome));
 
   // Wire up the forced-logout signal from ApiClient.
-  // The network layer calls _forceLogout() on a 401 (non-auth endpoint),
-  // clears storage and sockets, then sets onForcedLogout.value = true.
-  // We listen here and navigate to LoginScreen without the network layer
-  // ever importing a widget or a navigator.
   ApiClient.instance.onForcedLogout.addListener(() {
     if (!ApiClient.instance.onForcedLogout.value) return;
     ApiClient.instance.onForcedLogout.value = false; // reset before navigating
@@ -91,7 +94,8 @@ Future<Widget> _resolveInitialScreen() async {
 }
 
 void _silentVerifyAndRegister() {
-  NotificationService.instance.registerToken();
+  final api = NotificationsApi(ApiClient.instance.dio);
+  PushService.instance.initialize(api);
 
   // Non-blocking server validation post-launch:
   ApiClient.instance.get('/auth/me').then((response) {
@@ -117,7 +121,7 @@ void _silentVerifyAndRegister() {
   });
 }
 
-class MccgEocApp extends StatelessWidget {
+class MccgEocApp extends StatefulWidget {
   const MccgEocApp({
     super.key,
     this.initialHome = const LoginScreen(),
@@ -126,13 +130,52 @@ class MccgEocApp extends StatelessWidget {
   final Widget initialHome;
 
   @override
+  State<MccgEocApp> createState() => _MccgEocAppState();
+}
+
+class _MccgEocAppState extends State<MccgEocApp> {
+  @override
+  void initState() {
+    super.initState();
+    PushService.instance.onDeepLink = _handleDeepLink;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _flushPendingDeepLink());
+  }
+
+  void _handleDeepLink(PushDataPayload payload) {
+    final nav = navigatorKey.currentState;
+    if (nav == null) {
+      _pendingDeepLink = payload;
+      return;
+    }
+    _navigateTo(payload);
+  }
+
+  void _flushPendingDeepLink() {
+    final pending = _pendingDeepLink;
+    if (pending != null) {
+      _pendingDeepLink = null;
+      _navigateTo(pending);
+    }
+  }
+
+  void _navigateTo(PushDataPayload payload) {
+    final caseNumber = payload.caseNumber;
+    if (caseNumber == null) return;
+    navigatorKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const MainShell()),
+      (_) => false,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MCCG EOC',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: initialHome,
+      home: widget.initialHome,
     );
   }
 }
+
