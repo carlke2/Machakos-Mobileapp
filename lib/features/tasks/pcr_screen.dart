@@ -35,8 +35,6 @@ class _PcrScreenState extends State<PcrScreen> {
     super.dispose();
   }
 
-  // ── File Selection ─────────────────────────────────────────────────────────
-
   Future<void> _pickCameraPhoto() async {
     try {
       final status = await Permission.camera.request();
@@ -118,8 +116,6 @@ class _PcrScreenState extends State<PcrScreen> {
       _isImage = false;
     });
   }
-
-  // ── Submit & Skip Handlers ──────────────────────────────────────────────────
 
   Future<void> _handleSubmit() async {
     final file = _selectedFile;
@@ -240,7 +236,6 @@ class _PcrScreenState extends State<PcrScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Header Notice ───────────────────────────────────────────────
               const Text(
                 'Attach PCR Document or Photo',
                 style: TextStyle(
@@ -260,7 +255,6 @@ class _PcrScreenState extends State<PcrScreen> {
 
               const SizedBox(height: 20),
 
-              // ── File Selection Buttons ──────────────────────────────────────
               Row(
                 children: [
                   Expanded(
@@ -313,7 +307,6 @@ class _PcrScreenState extends State<PcrScreen> {
 
               const SizedBox(height: 20),
 
-              // ── Preview Area ────────────────────────────────────────────────
               if (file != null) ...[
                 Container(
                   decoration: BoxDecoration(
@@ -412,7 +405,6 @@ class _PcrScreenState extends State<PcrScreen> {
                 const SizedBox(height: 20),
               ],
 
-              // ── Optional Note Field ─────────────────────────────────────────
               const Text(
                 'PCR Note (Optional)',
                 style: TextStyle(
@@ -453,7 +445,6 @@ class _PcrScreenState extends State<PcrScreen> {
 
               const SizedBox(height: 32),
 
-              // ── Submit Button ───────────────────────────────────────────────
               SizedBox(
                 height: 54,
                 child: ElevatedButton(
@@ -496,7 +487,6 @@ class _PcrScreenState extends State<PcrScreen> {
 
               const SizedBox(height: 12),
 
-              // ── Skip Option ─────────────────────────────────────────────────
               Center(
                 child: TextButton(
                   onPressed: _isUploading ? null : _handleSkip,

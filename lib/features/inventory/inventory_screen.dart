@@ -10,10 +10,6 @@ import 'package:mobileapp/features/notifications/push_service.dart';
 import 'inventory_models.dart';
 import 'inventory_repository.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// InventoryScreen  (two-tab: Stock & My Stock)
-// ─────────────────────────────────────────────────────────────────────────────
-
 class InventoryScreen extends StatelessWidget {
   const InventoryScreen({
     super.key,
@@ -106,11 +102,6 @@ class InventoryScreen extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Returns a display-friendly label for the raw backend category string.
 String _categoryLabel(String category) {
   switch (category) {
     case 'VITALS':
@@ -128,7 +119,6 @@ String _categoryLabel(String category) {
   }
 }
 
-/// Returns an icon appropriate for each inventory category.
 IconData _categoryIcon(String category) {
   switch (category) {
     case 'VITALS':
@@ -145,10 +135,6 @@ IconData _categoryIcon(String category) {
       return Icons.inventory_2_outlined;
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab 1 – Stock (Browse & Checkout)
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _StockTab extends StatefulWidget {
   const _StockTab({
@@ -315,8 +301,6 @@ class _StockTabState extends State<_StockTab>
     }
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -333,7 +317,6 @@ class _StockTabState extends State<_StockTab>
       children: [
         Column(
           children: [
-            // Vehicle Check-in Guard or Active Vehicle Banner
             if (_activeCheckIn == null)
               Container(
                 margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
@@ -434,7 +417,6 @@ class _StockTabState extends State<_StockTab>
           ],
         ),
 
-        // Floating Checkout button
         if (_cart.isNotEmpty)
           Positioned(
             left: 16,
@@ -474,8 +456,6 @@ class _StockTabState extends State<_StockTab>
   }
 }
 
-// ── Category header ──────────────────────────────────────────────────────────
-
 class _CategoryHeader extends StatelessWidget {
   const _CategoryHeader({required this.category});
 
@@ -504,8 +484,6 @@ class _CategoryHeader extends StatelessWidget {
     );
   }
 }
-
-// ── Stock item row ────────────────────────────────────────────────────────────
 
 class _StockItemRow extends StatelessWidget {
   const _StockItemRow({
@@ -537,7 +515,6 @@ class _StockItemRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            // Name + badges
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,7 +562,6 @@ class _StockItemRow extends StatelessWidget {
               ),
             ),
 
-            // Stepper
             if (!outOfStock)
               _QtyStepper(
                 value: cartQty,
@@ -599,10 +575,6 @@ class _StockItemRow extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab 2 – My Stock (Onboard / Return)
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _MyStockTab extends StatefulWidget {
   const _MyStockTab({
@@ -721,8 +693,6 @@ class _MyStockTabState extends State<_MyStockTab>
   }
 }
 
-// ── Checkout row ──────────────────────────────────────────────────────────────
-
 class _CheckoutRow extends StatelessWidget {
   const _CheckoutRow({required this.checkout, this.onReturn});
 
@@ -748,7 +718,6 @@ class _CheckoutRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -799,7 +768,6 @@ class _CheckoutRow extends StatelessWidget {
               ),
             ),
 
-            // Return button
             if (!returned)
               TextButton(
                 onPressed: onReturn,
@@ -819,10 +787,6 @@ class _CheckoutRow extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Return bottom sheet
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _ReturnSheet extends StatefulWidget {
   const _ReturnSheet({required this.checkout});
@@ -855,7 +819,6 @@ class _ReturnSheetState extends State<_ReturnSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Handle
           Center(
             child: Container(
               width: 36,
@@ -885,7 +848,6 @@ class _ReturnSheetState extends State<_ReturnSheet> {
           ),
           const SizedBox(height: 20),
 
-          // Quantity stepper (centered)
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -917,10 +879,6 @@ class _ReturnSheetState extends State<_ReturnSheet> {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Shared small widgets
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _QtyStepper extends StatelessWidget {
   const _QtyStepper({

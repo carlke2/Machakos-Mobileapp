@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobileapp/core/app_events.dart';
 import 'package:mobileapp/core/network/socket_service.dart';
 import 'package:mobileapp/core/theme/app_colors.dart';
 import 'package:mobileapp/features/tasks/task_screen.dart';
@@ -22,6 +23,18 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     SocketService.instance.connect();
+    AppEvents.assignmentFocusRequest.addListener(_focusAssignmentTab);
+  }
+
+  @override
+  void dispose() {
+    AppEvents.assignmentFocusRequest.removeListener(_focusAssignmentTab);
+    super.dispose();
+  }
+
+  void _focusAssignmentTab() {
+    if (!mounted || _currentIndex == 0) return;
+    setState(() => _currentIndex = 0);
   }
 
   @override

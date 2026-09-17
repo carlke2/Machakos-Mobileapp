@@ -85,7 +85,6 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
     final preHospital = _preHospitalController.text.trim();
     final challenges = _challengesController.text.trim();
 
-    // ── Validation ──────────────────────────────────────────────────────────
     if (preHospital.isEmpty) {
       _showSnackBar(
         'Pre-hospital management notes are required',
@@ -94,7 +93,6 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
       return;
     }
 
-    // ── Build Handover Vitals Payload (only non-empty fields) ───────────────
     final vitals = <String, String>{};
     if (_tempController.text.trim().isNotEmpty) {
       vitals['temperature'] = _tempController.text.trim();
@@ -179,7 +177,6 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Pre-hospital management ─────────────────────────────────────
               const Text(
                 'Pre-hospital Management *',
                 style: TextStyle(
@@ -227,7 +224,6 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
 
               const SizedBox(height: 20),
 
-              // ── Dispatcher challenges ───────────────────────────────────────
               const Text(
                 'Dispatcher Challenges (Optional)',
                 style: TextStyle(
@@ -277,7 +273,6 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
               const Divider(color: AppColors.border),
               const SizedBox(height: 16),
 
-              // ── Handover Vitals Section ─────────────────────────────────────
               Row(
                 children: const [
                   Icon(
@@ -377,7 +372,6 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
 
               const SizedBox(height: 32),
 
-              // ── Submit button ───────────────────────────────────────────────
               SizedBox(
                 height: 54,
                 child: ElevatedButton(

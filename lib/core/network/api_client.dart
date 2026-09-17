@@ -5,10 +5,6 @@ import '../config/app_config.dart';
 import '../storage/secure_storage_service.dart';
 import 'socket_service.dart';
 
-// ---------------------------------------------------------------------------
-// ApiException — public error surface for all callers.
-// ---------------------------------------------------------------------------
-
 class ApiException implements Exception {
   const ApiException(this.message);
   final String message;
@@ -17,60 +13,36 @@ class ApiException implements Exception {
   String toString() => 'ApiException: $message';
 }
 
-// ---------------------------------------------------------------------------
-// ApiClient — lazy singleton, no async readiness step.
-// ---------------------------------------------------------------------------
-
 class ApiClient {
   ApiClient._() {
     _setUp();
   }
 
-  // ── Singleton ─────────────────────────────────────────────────────────────
-
   static final ApiClient instance = ApiClient._();
 
-  // ── Forced-logout signal ──────────────────────────────────────────────────
-  //
-  // Emits `true` whenever a 401 on a non-auth endpoint triggers a forced
-  // logout.  Wire this up in your widget tree (e.g. in MccgEocApp.initState
-  // or via a listener added immediately after runApp) to navigate to the
-  // login screen:
-  //
-  //   ApiClient.instance.onForcedLogout.addListener(() {
-  //     if (ApiClient.instance.onForcedLogout.value) {
-  //       navigatorKey.currentState?.pushAndRemoveUntil(
-  //         MaterialPageRoute(builder: (_) => const LoginScreen()),
-  //         (_) => false,
-  //       );
-  //       ApiClient.instance.onForcedLogout.value = false; // reset
-  //     }
-  //   });
-  //
+  /// Emits `true` when a 401 on a non-auth endpoint forces a logout. The UI
+  /// layer listens and navigates; this class never touches navigation.
   final ValueNotifier<bool> onForcedLogout = ValueNotifier(false);
 
-  // ── Internal state ────────────────────────────────────────────────────────
+  /// Runs before the session is cleared on a forced logout, while the Bearer
+  /// token is still valid. Used to release the FCM token server-side so a
+  /// signed-out handset stops receiving dispatch alerts.
+  Future<void> Function()? onBeforeForcedLogout;
 
   late final Dio _dio;
 
-  /// Returns the underlying [Dio] instance for service modules.
   Dio get dio => _dio;
 
-  /// The resolved base URL — read from [AppConfig.apiUrl].
-  /// Kept as a public field so [SocketService] and [HistoryRepository] can
-  /// continue to read it without needing their own imports of AppConfig.
   final String baseUrl = AppConfig.apiUrl;
 
   static bool _isLoggingOut = false;
-
-  // ── Setup ─────────────────────────────────────────────────────────────────
 
   void _setUp() {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 15),
+        connectTimeout: AppConfig.connectTimeout,
+        receiveTimeout: AppConfig.receiveTimeout,
       ),
     );
 
@@ -115,8 +87,8 @@ class ApiClient {
           return handler.reject(
             DioException(
               requestOptions: e.requestOptions,
-              error: ApiException(
-                'Could not reach the server at $baseUrl. Check network/ADB connection.',
+              error: const ApiException(
+                'No connection to the dispatch server. Check your signal and try again.',
               ),
               type: e.type,
             ),
@@ -126,22 +98,22 @@ class ApiClient {
     );
   }
 
-  // ── Forced logout (no navigation — emits onForcedLogout) ──────────────────
-
   Future<void> _forceLogout() async {
     if (_isLoggingOut) return;
     _isLoggingOut = true;
     try {
+      try {
+        await onBeforeForcedLogout?.call();
+      } catch (e) {
+        if (kDebugMode) debugPrint('[ApiClient] pre-logout hook failed: $e');
+      }
       SocketService.instance.disconnect();
       await SecureStorageService.instance.clearAll();
-      // Signal the UI layer — whoever is listening navigates to login.
       onForcedLogout.value = true;
     } finally {
       _isLoggingOut = false;
     }
   }
-
-  // ── Private request helper — single try/catch for all verbs ───────────────
 
   Future<Response<dynamic>> _request(
     Future<Response<dynamic>> Function() call,
@@ -154,8 +126,6 @@ class ApiClient {
           : ApiException(e.message ?? 'Unknown error');
     }
   }
-
-  // ── Public HTTP verbs ─────────────────────────────────────────────────────
 
   Future<Response<dynamic>> get(
     String path, {

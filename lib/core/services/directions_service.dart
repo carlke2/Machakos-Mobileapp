@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../config/app_config.dart';
 
 /// Result object returned by [DirectionsService].
 class DirectionsResult {
@@ -19,7 +20,16 @@ class DirectionsResult {
 
 /// Service to query Google Directions API and decode polyline routes.
 class DirectionsService {
-  DirectionsService({Dio? dio}) : _dio = dio ?? Dio();
+  DirectionsService({Dio? dio})
+      : _dio = dio ??
+            Dio(
+              // Untimed, a slow Google response leaves the crew watching a
+              // spinner instead of falling back to a straight-line route.
+              BaseOptions(
+                connectTimeout: AppConfig.connectTimeout,
+                receiveTimeout: AppConfig.receiveTimeout,
+              ),
+            );
 
   final Dio _dio;
   static const String _mapsApiKey = 'AIzaSyDG6P_pPPLSpM9FMBrTL3t5mjj0JlJRZQ0';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:mobileapp/core/app_events.dart';
 import 'package:mobileapp/core/network/api_client.dart';
 import 'package:mobileapp/core/network/socket_service.dart';
 import 'package:mobileapp/core/storage/secure_storage_service.dart';
@@ -35,12 +36,18 @@ class _TaskScreenState extends State<TaskScreen> {
     _loadUserRole();
     _loadActiveTask();
     _registerSocketListeners();
+    AppEvents.assignmentFocusRequest.addListener(_onAssignmentFocusRequested);
   }
 
   @override
   void dispose() {
+    AppEvents.assignmentFocusRequest.removeListener(_onAssignmentFocusRequested);
     _unregisterSocketListeners();
     super.dispose();
+  }
+
+  void _onAssignmentFocusRequested() {
+    if (mounted) _loadActiveTask(silent: true);
   }
 
   void _onTaskEvent(dynamic _) {

@@ -1,20 +1,10 @@
 import 'package:mobileapp/core/network/api_client.dart';
 import 'inventory_models.dart';
 
-/// Repository that maps the four backend inventory endpoints to typed
-/// Dart methods.
-///
-/// Endpoints (all require DRIVER | EMT | NURSE role):
-///   GET  /inventory                       → [listAvailable]
-///   POST /inventory/checkout              → [checkout]
-///   GET  /inventory/my                    → [myStock]
-///   POST /inventory/checkouts/:id/return  → [returnItem]
+/// All endpoints require the DRIVER, EMT or NURSE role.
 class InventoryRepository {
   const InventoryRepository();
 
-  // ── Browse ──────────────────────────────────────────────────────────────
-
-  /// Returns all active central-stock items, ordered by category then name.
   Future<List<InventoryItem>> listAvailable() async {
     final response = await ApiClient.instance.get('/inventory');
     final body = response.data as Map<String, dynamic>;
@@ -24,12 +14,8 @@ class InventoryRepository {
         .toList();
   }
 
-  // ── Checkout ─────────────────────────────────────────────────────────────
-
-  /// Posts a cart of items to the API, drawing them from central stock onto
-  /// the ambulance the caller is currently checked into.
-  ///
-  /// [lines] must not be empty.
+  /// Draws [lines] from central stock onto the ambulance the caller is
+  /// currently checked into. [lines] must not be empty.
   Future<List<InventoryCheckout>> checkout(List<CartLine> lines) async {
     final items = lines
         .map((l) => {'itemId': l.item.id, 'quantity': l.quantity})
@@ -47,10 +33,8 @@ class InventoryRepository {
         .toList();
   }
 
-  // ── My Stock ─────────────────────────────────────────────────────────────
-
-  /// Returns all CHECKED_OUT records for the ambulance the caller is on.
-  /// The vehicle is resolved server-side from the caller's current check-in.
+  /// Outstanding checkouts for the caller's ambulance. The vehicle is resolved
+  /// server-side from their current check-in.
   Future<List<InventoryCheckout>> myStock() async {
     final response = await ApiClient.instance.get('/inventory/my');
     final body = response.data as Map<String, dynamic>;
@@ -60,12 +44,7 @@ class InventoryRepository {
         .toList();
   }
 
-  // ── Return ────────────────────────────────────────────────────────────────
-
-  /// Returns [quantity] units of a checkout back to central stock.
-  ///
-  /// The server validates that [quantity] does not exceed the outstanding
-  /// amount. Throws [ApiException] on validation failure.
+  /// Throws [ApiException] if [quantity] exceeds the outstanding amount.
   Future<InventoryCheckout> returnItem(
     String checkoutId,
     int quantity,

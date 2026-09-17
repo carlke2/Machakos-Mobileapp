@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -5,76 +7,72 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'notifications_api.dart';
 import 'models.dart';
 
-/// Must be a TOP-LEVEL (or static) function — FCM invokes this in a
-/// separate isolate when a data message arrives while the app is fully
-/// terminated or backgrounded on Android. Register it in main() BEFORE
-/// runApp(), not inside PushService.initialize():
-///
-///   void main() async {
-///     WidgetsFlutterBinding.ensureInitialized();
-///     await Firebase.initializeApp();
-///     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-///     runApp(const MyApp());
-///   }
-///
-/// Per the audit, every send carries a `notification` block, so the OS
-/// already renders a tray notification in this state on its own — this
-/// handler exists for any future backend change to a data-only payload,
-/// and as a hook if you later want to do local work (e.g. pre-fetch the
-/// case) before the user taps it. Keep it minimal; heavy work here can
-/// get the isolate killed before it finishes.
+/// Runs in its own isolate when a message arrives while the app is
+/// backgrounded or terminated. Every send carries a `notification` block, so
+/// the OS already draws the tray entry; this exists only as the required
+/// registration target and a hook for future data-only payloads. Heavy work
+/// here risks the isolate being killed before it completes.
 @pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Intentionally minimal — see comment above.
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
+
+/// A push that arrived while this session was running, kept in memory so the
+/// crew can re-read an alert they missed or dismissed.
+class ReceivedAlert {
+  ReceivedAlert({
+    required this.title,
+    required this.body,
+    required this.payload,
+    required this.receivedAt,
+  });
+
+  final String? title;
+  final String? body;
+  final PushDataPayload payload;
+  final DateTime receivedAt;
 }
 
-/// Owns the full FCM lifecycle for this app: permission request, token
-/// registration/refresh against POST /notifications/token, and the three
-/// message-receipt states FCM distinguishes (foreground / background-tap
-/// / terminated-cold-start), each parsed against the exact `data` shape
-/// confirmed in the audit:
-///
-///   TASK_ASSIGNED:       { type, caseNumber }
-///   TASK_STATUS_CHANGED: { type, caseNumber, status }
-///
-/// There is no per-user notification history endpoint on mobile (see
-/// models.dart) — this service is the entire notifications surface
-/// for the app. If you want an in-app inbox akin to the web drawer, it
-/// would need to be a purely local/session list built from messages this
-/// service receives — there's nothing to fetch on screen mount.
+/// Owns the FCM lifecycle: permission, token registration and refresh against
+/// `/notifications/token`, and the three receipt states FCM distinguishes
+/// (foreground, background tap, terminated cold start).
 class PushService {
   PushService._();
   static final PushService instance = PushService._();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  // Resolved lazily. Reading FirebaseMessaging.instance throws when Firebase
+  // failed to initialize (a missing google-services.json, for one), and this
+  // singleton is touched on startup paths that must survive that.
+  FirebaseMessaging? _messagingInstance;
+  FirebaseMessaging get _messaging =>
+      _messagingInstance ??= FirebaseMessaging.instance;
+
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
   NotificationsApi? _api;
+  bool _listenersAttached = false;
+  bool _channelCreated = false;
+  Timer? _tokenRetryTimer;
+  int _tokenAttempts = 0;
 
-  /// Called whenever a push is tapped (from background OR a cold start)
-  /// with the parsed deep-link target. Wire this to your app's router —
-  /// e.g. `PushService.instance.onDeepLink = (payload) =>
-  /// navigatorKey.currentState?.pushNamed('/tasks/by-case',
-  /// arguments: payload.caseNumber);`
-  ///
-  /// Both TASK_ASSIGNED and TASK_STATUS_CHANGED route to the same place
-  /// per the audit ("deep-link directly to the incident/assignment
-  /// screen for that caseNumber") — `status` on TASK_STATUS_CHANGED is
-  /// available if you want to show a toast/banner on arrival rather than
-  /// changing where you navigate.
+  /// In-session alert history, newest first. Drives the header bell.
+  final ValueNotifier<List<ReceivedAlert>> alerts = ValueNotifier(const []);
+
+  /// Invoked when a push is tapped, from background or from a cold start.
   void Function(PushDataPayload payload)? onDeepLink;
+
+  static const _maxTokenAttempts = 5;
 
   static const _androidChannel = AndroidNotificationChannel(
     'high_importance_channel',
     'Task & dispatch alerts',
     description: 'Assignment and status-change notifications for crew.',
-    importance: Importance.high,
+    importance: Importance.max,
+    enableVibration: true,
+    playSound: true,
   );
 
-  /// Call once, after login (so NotificationsApi has a valid auth
-  /// session to register the token against) and after
-  /// Firebase.initializeApp() has already run in main().
+  /// Safe to call more than once — listeners attach only on the first call, so
+  /// a login following a cold start does not double-register handlers.
   Future<void> initialize(NotificationsApi api) async {
     _api = api;
 
@@ -86,23 +84,26 @@ class PushService {
       sound: true,
     );
     if (kDebugMode) {
-      debugPrint('Push permission status: ${settings.authorizationStatus}');
+      debugPrint('Push permission: ${settings.authorizationStatus}');
     }
 
+    _tokenAttempts = 0;
     await _registerCurrentToken();
-    _messaging.onTokenRefresh.listen((_) => _registerCurrentToken());
 
-    // Foreground: FCM does NOT auto-display anything while the app is
-    // open, so build the banner ourselves from the `notification` block.
+    if (_listenersAttached) return;
+    _listenersAttached = true;
+
+    _messaging.onTokenRefresh.listen((_) {
+      _tokenAttempts = 0;
+      _registerCurrentToken();
+    });
+
+    // FCM does not draw anything while the app is open, so build the banner.
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-    // App was backgrounded (not terminated) and the user tapped the
-    // system tray notification.
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
 
-    // App was fully terminated and launched BY tapping a notification.
-    // Must be checked explicitly — onMessageOpenedApp does not fire for
-    // this case.
+    // onMessageOpenedApp does not fire for a launch-by-tap from terminated.
     final initialMessage = await _messaging.getInitialMessage();
     if (initialMessage != null) {
       _handleMessageOpenedApp(initialMessage);
@@ -110,50 +111,68 @@ class PushService {
   }
 
   Future<void> _setupLocalNotifications() async {
+    if (_channelCreated) return;
+
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings();
     await _localNotifications.initialize(
       const InitializationSettings(android: androidInit, iOS: iosInit),
       onDidReceiveNotificationResponse: (response) {
-        final caseNumber = response.payload;
-        if (caseNumber == null) return;
-        // Local-notification tap while app is already in foreground —
-        // route the same way as a real FCM tap. We don't have `type`
-        // here (only caseNumber was stashed as the payload string), but
-        // per the audit both known types route identically.
-        onDeepLink?.call(
-          PushDataPayload(
-            type: PushNotificationType.unknown,
-            caseNumber: caseNumber,
-            status: null,
-          ),
-        );
+        final raw = response.payload;
+        if (raw == null || raw.isEmpty) return;
+        onDeepLink?.call(_decodeTapPayload(raw));
       },
     );
     await _localNotifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(_androidChannel);
+
+    _channelCreated = true;
   }
 
   Future<void> _registerCurrentToken() async {
     final api = _api;
     if (api == null) return;
+
+    _tokenRetryTimer?.cancel();
+    _tokenAttempts++;
+
     try {
       final token = await _messaging.getToken();
-      if (token == null || token.isEmpty) return;
+      if (token == null || token.isEmpty) {
+        _scheduleTokenRetry('FCM token not ready');
+        return;
+      }
       await api.registerToken(PushTokenRegistration(fcmToken: token));
+      _tokenAttempts = 0;
     } catch (e) {
-      // Registration failure shouldn't crash startup — the user just
-      // won't receive push until the next successful attempt (e.g. next
-      // onTokenRefresh, or next app launch's initialize() call).
-      if (kDebugMode) debugPrint('FCM token registration failed: $e');
+      _scheduleTokenRetry('$e');
     }
   }
 
-  /// Call on logout, before clearing the auth session, so the call still
-  /// carries a valid Bearer token.
+  /// Google Play Services can take a few seconds after a cold install to mint
+  /// a token. Without this retry the handset silently receives no dispatch
+  /// alerts until the next app launch.
+  void _scheduleTokenRetry(String reason) {
+    if (_tokenAttempts >= _maxTokenAttempts) {
+      if (kDebugMode) {
+        debugPrint('FCM token registration gave up after $_tokenAttempts: $reason');
+      }
+      return;
+    }
+    final delay = Duration(seconds: 2 * _tokenAttempts);
+    if (kDebugMode) {
+      debugPrint('FCM token registration retry in ${delay.inSeconds}s: $reason');
+    }
+    _tokenRetryTimer = Timer(delay, _registerCurrentToken);
+  }
+
+  /// Call on logout while the Bearer token is still valid.
   Future<void> unregister() async {
+    _tokenRetryTimer?.cancel();
+    _tokenAttempts = 0;
+    alerts.value = const [];
     try {
       await _api?.unregisterToken();
     } catch (e) {
@@ -166,7 +185,9 @@ class PushService {
       title: message.notification?.title,
       body: message.notification?.body,
     );
-    final dataPayload = PushDataPayload.fromMap(message.data);
+    final payload = PushDataPayload.fromMap(message.data);
+
+    _recordAlert(content, payload);
 
     _localNotifications.show(
       message.hashCode,
@@ -177,20 +198,54 @@ class PushService {
           _androidChannel.id,
           _androidChannel.name,
           channelDescription: _androidChannel.description,
-          importance: Importance.high,
+          importance: Importance.max,
           priority: Priority.high,
+          category: AndroidNotificationCategory.call,
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: const DarwinNotificationDetails(
+          interruptionLevel: InterruptionLevel.timeSensitive,
+        ),
       ),
-      // Stash caseNumber as the payload so a tap on THIS local
-      // notification (foreground) can still deep-link — see
-      // onDidReceiveNotificationResponse above.
-      payload: dataPayload.caseNumber,
+      payload: _encodeTapPayload(payload),
     );
   }
 
   void _handleMessageOpenedApp(RemoteMessage message) {
     final payload = PushDataPayload.fromMap(message.data);
+    _recordAlert(
+      PushNotificationContent(
+        title: message.notification?.title,
+        body: message.notification?.body,
+      ),
+      payload,
+    );
     onDeepLink?.call(payload);
+  }
+
+  void _recordAlert(PushNotificationContent content, PushDataPayload payload) {
+    alerts.value = [
+      ReceivedAlert(
+        title: content.title,
+        body: content.body,
+        payload: payload,
+        receivedAt: DateTime.now(),
+      ),
+      ...alerts.value,
+    ].take(50).toList(growable: false);
+  }
+
+  // flutter_local_notifications carries a single string through a tap, so the
+  // routing fields are packed into it and unpacked on the way back.
+  static String _encodeTapPayload(PushDataPayload payload) =>
+      [payload.taskId ?? '', payload.caseNumber ?? ''].join('|');
+
+  static PushDataPayload _decodeTapPayload(String raw) {
+    final parts = raw.split('|');
+    return PushDataPayload(
+      type: PushNotificationType.unknown,
+      taskId: parts.isNotEmpty && parts[0].isNotEmpty ? parts[0] : null,
+      caseNumber: parts.length > 1 && parts[1].isNotEmpty ? parts[1] : null,
+      status: null,
+    );
   }
 }

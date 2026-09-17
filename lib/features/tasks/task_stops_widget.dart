@@ -45,10 +45,12 @@ class _TaskStopsWidgetState extends State<TaskStopsWidget> {
   }
 
   void _registerSocketListeners() {
+    SocketService.instance.onTaskStopChanged(_onStopSocketEvent);
     SocketService.instance.onTaskUpdated(_onStopSocketEvent);
   }
 
   void _unregisterSocketListeners() {
+    SocketService.instance.offTaskStopChanged(_onStopSocketEvent);
     SocketService.instance.offTaskUpdated(_onStopSocketEvent);
   }
 
@@ -94,7 +96,6 @@ class _TaskStopsWidgetState extends State<TaskStopsWidget> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Handle bar
               Center(
                 child: Container(
                   width: 36,

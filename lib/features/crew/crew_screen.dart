@@ -110,7 +110,6 @@ class _CrewScreenState extends State<CrewScreen> {
     );
   }
 
-
   Future<void> _openCrewPickerSheet(String roleTitle, String targetRole) async {
     final active = _activeCheckIn;
     if (active == null) return;
@@ -149,7 +148,6 @@ class _CrewScreenState extends State<CrewScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Handle bar
                   Center(
                     child: Container(
                       width: 36,
@@ -162,7 +160,6 @@ class _CrewScreenState extends State<CrewScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -182,7 +179,6 @@ class _CrewScreenState extends State<CrewScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Search bar
                   TextField(
                     onChanged: (val) {
                       setSheetState(() => searchQuery = val);
@@ -202,7 +198,6 @@ class _CrewScreenState extends State<CrewScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // List of members
                   Expanded(
                     child: roleMembers.isEmpty
                         ? Center(
@@ -386,7 +381,6 @@ class _CrewScreenState extends State<CrewScreen> {
     }
   }
 
-
   Future<void> _onVehicleTap(Vehicle vehicle) async {
     setState(() => _selectedVehicle = vehicle);
 
@@ -420,14 +414,12 @@ class _CrewScreenState extends State<CrewScreen> {
   }
 
   Future<void> _startCheckInProcess(Vehicle vehicle) async {
-    // 1. Camera permission check
     final cameraStatus = await Permission.camera.request();
     if (!cameraStatus.isGranted) {
       _showSnackBar('Camera permission is required to check in.', isError: true);
       return;
     }
 
-    // 2. Selfie capture
     final picker = ImagePicker();
     final XFile? photo = await picker.pickImage(
       source: ImageSource.camera,
@@ -440,7 +432,6 @@ class _CrewScreenState extends State<CrewScreen> {
       return;
     }
 
-    // 3. Location permission check
     LocationPermission locPerm = await Geolocator.checkPermission();
     if (locPerm == LocationPermission.denied) {
       locPerm = await Geolocator.requestPermission();
@@ -452,7 +443,6 @@ class _CrewScreenState extends State<CrewScreen> {
       return;
     }
 
-    // 4. Get GPS Position & submit
     setState(() => _isActionSubmitting = true);
 
     try {
@@ -490,7 +480,6 @@ class _CrewScreenState extends State<CrewScreen> {
       }
     }
   }
-
 
   Future<void> _handleCheckOut() async {
     final active = _activeCheckIn;
@@ -546,7 +535,6 @@ class _CrewScreenState extends State<CrewScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -582,16 +570,13 @@ class _CrewScreenState extends State<CrewScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // User info header
                         _buildUserHeader(),
                         const SizedBox(height: 20),
 
-                        // State 1: CHECKED IN view
                         if (_activeCheckIn != null) ...[
                           _buildCheckedInCard(_activeCheckIn!),
                           _buildCrewAssignmentSection(_activeCheckIn!),
                         ]
-                        // State 2: NOT CHECKED IN view
                         else
                           _buildNotCheckedInSection(),
                       ],
@@ -841,7 +826,6 @@ class _CrewScreenState extends State<CrewScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Toggle button to expand/collapse vehicle list
         SizedBox(
           height: 52,
           child: ElevatedButton.icon(

@@ -248,7 +248,6 @@ class _NavigateScreenState extends State<NavigateScreen> {
       ),
       body: Stack(
         children: [
-          // ── Embedded Google Map ─────────────────────────────────────────────
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: initialTarget,
@@ -270,7 +269,6 @@ class _NavigateScreenState extends State<NavigateScreen> {
             },
           ),
 
-          // ── Loading Indicator Overlay ───────────────────────────────────────
           if (_isLoading)
             Positioned(
               top: 16,
@@ -314,7 +312,6 @@ class _NavigateScreenState extends State<NavigateScreen> {
               ),
             ),
 
-          // ── Error Banner Overlay ────────────────────────────────────────────
           if (_errorMessage != null && !_isLoading)
             Positioned(
               top: 16,
@@ -348,7 +345,6 @@ class _NavigateScreenState extends State<NavigateScreen> {
               ),
             ),
 
-          // ── Bottom Destination & ETA Panel ──────────────────────────────────
           Positioned(
             left: 16,
             right: 16,

@@ -2,7 +2,20 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    id("com.google.gms.google-services")
+}
+
+// google-services.json carries the Firebase project identity and is not in
+// version control. Applying the plugin unconditionally fails the build outright
+// for anyone without the file; applying it only when present keeps the app
+// buildable, with push disabled at runtime.
+val googleServicesConfig = file("google-services.json")
+if (googleServicesConfig.exists()) {
+    apply(plugin = "com.google.gms.google-services")
+} else {
+    logger.warn(
+        "google-services.json not found at ${googleServicesConfig.path} - " +
+            "building without Firebase. Push notifications will not work in this build."
+    )
 }
 
 android {
@@ -17,10 +30,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.machakoseoc.mobileapp"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -49,4 +59,3 @@ flutter {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
-
