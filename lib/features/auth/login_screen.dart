@@ -142,35 +142,21 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.brandNavy,
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.brandNavy,
-              AppColors.brandNavyLight,
-              AppColors.primaryDark,
-            ],
-            stops: [0.0, 0.55, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildServiceBadge(),
-                    const SizedBox(height: 18),
-                    _buildLoginCard(),
-                    const SizedBox(height: 20),
-                    _buildFooter(),
-                  ],
-                ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildServiceBadge(),
+                  const SizedBox(height: 18),
+                  _buildLoginCard(),
+                  const SizedBox(height: 20),
+                  _buildFooter(),
+                ],
               ),
             ),
           ),
@@ -572,11 +558,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            colors: disabled
-                ? const [AppColors.borderStrong, AppColors.borderStrong]
-                : const [AppColors.primary, AppColors.accentDark],
-          ),
+          color: disabled ? AppColors.borderStrong : AppColors.primary,
           boxShadow: disabled
               ? null
               : [
