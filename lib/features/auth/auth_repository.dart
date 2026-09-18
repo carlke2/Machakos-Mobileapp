@@ -1,0 +1,131 @@
+import 'dart:async';
+
+import 'package:mobileapp/core/network/api_client.dart';
+import 'package:mobileapp/core/storage/secure_storage_service.dart';
+import 'package:mobileapp/features/notifications/notifications_api.dart';
+import 'package:mobileapp/features/notifications/push_service.dart';
+
+const _allowedRoles = {'DRIVER', 'EMT', 'NURSE'};
+
+/// Authentication payload result.
+class AuthResult {
+  const AuthResult({
+    required this.token,
+    required this.userId,
+    required this.name,
+    required this.email,
+    required this.role,
+    required this.agencyId,
+  });
+
+  final String token;
+  final String userId;
+  final String name;
+  final String email;
+  final String role;
+  final String agencyId;
+}
+
+/// Handles responder credential authentication and storage.
+class AuthRepository {
+  AuthRepository();
+
+  final _storage = SecureStorageService.instance;
+
+  /// Sign in with email and password credentials.
+  Future<AuthResult> login(String email, String password) async {
+    final response = await ApiClient.instance.post(
+      '/auth/login',
+      data: {'email': email.trim(), 'passwordRaw': password},
+    );
+
+    final body = response.data as Map<String, dynamic>;
+    final data = body['data'] as Map<String, dynamic>;
+    final token = data['token'] as String;
+    final user = data['user'] as Map<String, dynamic>;
+    final role = user['role'] as String? ?? '';
+
+    if (!_allowedRoles.contains(role)) {
+      await _storage.clearAll();
+      throw const ApiException(
+        'This app is for field responders only (Driver, EMT, Nurse).',
+      );
+    }
+
+    await Future.wait([
+      _storage.saveToken(token),
+      _storage.saveUser(user),
+    ]);
+
+    // Register FCM only when Firebase initialized (missing google-services.json → skip).
+    if (PushService.firebaseAvailable) {
+      final api = NotificationsApi(ApiClient.instance.dio);
+      // Fire-and-forget; failures retry inside PushService.
+      unawaited(PushService.instance.initialize(api));
+    }
+
+    return AuthResult(
+      token: token,
+      userId: user['id'] as String? ?? '',
+      name: user['name'] as String? ?? '',
+      email: user['email'] as String? ?? email,
+      role: role,
+      agencyId: user['agencyId'] as String? ?? '',
+    );
+  }
+
+  /// Request a 6-digit OTP code to the responder's phone.
+  Future<void> requestOtp(String phone) async {
+    await ApiClient.instance.post(
+      '/auth/otp/request',
+      data: {'phone': phone.trim()},
+    );
+  }
+
+  /// Verify OTP code and save session.
+  Future<AuthResult> verifyOtp(String phone, String code) async {
+    final response = await ApiClient.instance.post(
+      '/auth/otp/verify',
+      data: {'phone': phone.trim(), 'code': code.trim()},
+    );
+
+    final body = response.data as Map<String, dynamic>;
+    final data = body['data'] as Map<String, dynamic>;
+    final token = data['token'] as String;
+    final user = data['user'] as Map<String, dynamic>;
+    final role = user['role'] as String? ?? '';
+
+    if (!_allowedRoles.contains(role)) {
+      await _storage.clearAll();
+      throw const ApiException(
+        'This app is for field responders only (Driver, EMT, Nurse).',
+      );
+    }
+
+    await Future.wait([
+      _storage.saveToken(token),
+      _storage.saveUser(user),
+    ]);
+
+    // Register FCM only when Firebase initialized (missing google-services.json → skip).
+    if (PushService.firebaseAvailable) {
+      final api = NotificationsApi(ApiClient.instance.dio);
+      unawaited(PushService.instance.initialize(api));
+    }
+
+    return AuthResult(
+      token: token,
+      userId: user['id'] as String? ?? '',
+      name: user['name'] as String? ?? '',
+      email: user['email'] as String? ?? '',
+      role: role,
+      agencyId: user['agencyId'] as String? ?? '',
+    );
+  }
+
+  Future<void> logout() async {
+    await PushService.instance.unregister();
+    await _storage.clearAll();
+  }
+}
+
