@@ -148,55 +148,10 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildServiceBadge(),
-                  const SizedBox(height: 18),
-                  _buildLoginCard(),
-                  const SizedBox(height: 20),
-                  _buildFooter(),
-                ],
-              ),
+              child: _buildLoginCard(),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  /// Names the app above the card so a responder handed an unfamiliar device
-  /// knows immediately which system they are signing in to.
-  Widget _buildServiceBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: AppColors.brandGold,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 9),
-          const Text(
-            'FIELD RESPONDER ACCESS',
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
-              color: Colors.white,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -318,6 +273,10 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 18),
           ],
           if (_isCodeStep) _buildCodeStep() else _buildPhoneStep(),
+          const SizedBox(height: 20),
+          const Divider(height: 1, thickness: 1, color: AppColors.border),
+          const SizedBox(height: 16),
+          _buildCardFooter(),
         ],
       ),
     );
@@ -609,38 +568,39 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildCardFooter() {
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.verified_user_outlined,
-              size: 15,
-              color: Colors.white.withValues(alpha: 0.75),
+              size: 14,
+              color: AppColors.textMutedLight,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 7),
             Flexible(
               child: Text(
                 'Authorized personnel only · All activity is logged and audited',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: Colors.white.withValues(alpha: 0.75),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: AppColors.textMutedLight,
                   height: 1.4,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
           '© ${DateTime.now().year} Machakos County Government · In partnership with Malteser International',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 11.5,
-            color: Colors.white.withValues(alpha: 0.5),
-            height: 1.5,
+          style: const TextStyle(
+            fontSize: 11,
+            color: AppColors.textMutedLight,
+            height: 1.45,
           ),
         ),
       ],
