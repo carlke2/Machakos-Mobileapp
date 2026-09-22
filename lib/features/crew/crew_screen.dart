@@ -562,7 +562,7 @@ class _CrewScreenState extends State<CrewScreen> {
         foregroundColor: AppColors.onPrimary,
         elevation: 0,
         title: const Text(
-          'MCCG EOC — Crew',
+          'NCCG — Crew',
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
         actions: [

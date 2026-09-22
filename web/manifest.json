@@ -1,6 +1,6 @@
 {
-    "name": "MCCG EOC Responder",
-    "short_name": "MCCG EOC",
+    "name": "NCCG",
+    "short_name": "NCCG",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

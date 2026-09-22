@@ -175,7 +175,7 @@ class _MccgEocAppState extends State<MccgEocApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MCCG EOC',
+      title: 'NCCG',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

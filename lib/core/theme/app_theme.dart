@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
-/// App theme definitions for MCCG (Machakos County Government EOC).
+/// App theme definitions for NCCG (Machakos County Government EOC).
 abstract final class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(

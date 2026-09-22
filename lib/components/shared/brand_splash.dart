@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
-/// Official MCCG splash screen displaying the centered circular badge on Navy.
+/// Official NCCG splash screen displaying the centered circular badge on Navy.
 class BrandSplash extends StatelessWidget {
   const BrandSplash({
     super.key,
@@ -23,11 +23,11 @@ class BrandSplash extends StatelessWidget {
               width: 140,
               height: 140,
               fit: BoxFit.contain,
-              semanticLabel: 'MCCG Crest',
+              semanticLabel: 'NCCG Crest',
             ),
             const SizedBox(height: 24),
             const Text(
-              'MCCG',
+              'NCCG',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 24,
