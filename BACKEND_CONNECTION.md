@@ -15,8 +15,8 @@ A copy also lives at `C:\Users\Nccg\BACKEND_CONNECTION.md`.
 | Bind | `HOST=0.0.0.0` `PORT=3000` (LAN-reachable) |
 | CORS | `CORS_ORIGIN=*` |
 | Health | `GET http://127.0.0.1:3000/` → `{"ok":true,"service":"NMS-EOC API",...}` |
-| This machine LAN IP | `192.168.100.184` (Wi-Fi — re-check if network changes) |
-| LAN health | `GET http://192.168.100.184:3000/` |
+| This machine LAN IP | `192.168.100.92` (Wi-Fi — re-check if network changes) |
+| LAN health | `GET http://192.168.100.92:3000/` |
 
 **No `/api` prefix on local Fastify.** Production nginx may use `https://machakos.brighton.co.ke/api`; local mobile must **not** append `/api`.
 
@@ -42,7 +42,7 @@ REM iOS simulator / desktop
 flutter run --dart-define=API_URL=http://127.0.0.1:3000
 
 REM Physical phone on same Wi-Fi (current LAN)
-flutter run --dart-define=API_URL=http://192.168.100.184:3000
+flutter run --dart-define=API_URL=http://192.168.100.92:3000
 
 REM Production build (nginx /api proxy)
 flutter build apk --release --dart-define=API_URL=https://machakos.brighton.co.ke/api --dart-define=SOCKET_URL=https://machakos.brighton.co.ke
@@ -137,10 +137,10 @@ Mobile does not emit client events (joins are server-side via JWT rooms `user:{i
 
 ```bat
 curl http://127.0.0.1:3000/
-curl http://192.168.100.184:3000/
+curl http://192.168.100.92:3000/
 ```
 
-From the phone browser (same Wi-Fi): open `http://192.168.100.184:3000/` — should show JSON health.
+From the phone browser (same Wi-Fi): open `http://192.168.100.92:3000/` — should show JSON health.
 
 ---
 

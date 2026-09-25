@@ -37,7 +37,7 @@ Drop the files into chat or copy them into those paths, then say when ready and 
 
 1. Restart backend (`C:\Users\USER\machakos-web\backend\.\dev.cmd`)
 2. Rebuild Flutter (config is build-time):  
-   `flutter run --dart-define=API_URL=http://192.168.100.184:3000`
+   `flutter run --dart-define=API_URL=http://192.168.100.92:3000`
 3. Log in as DRIVER/EMT/NURSE → allow notifications
 4. Crew tab → tap bell → expect “NMS EOC test”
 5. Or admin: paste user UUID → **Send device test**

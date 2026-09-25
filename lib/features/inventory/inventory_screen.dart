@@ -255,11 +255,11 @@ class _StockTabState extends State<_StockTab>
 
     if (_activeCheckIn == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
             'Vehicle Check-in Required: Please check in to an ambulance on the Crew tab before drawing stock.',
           ),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
@@ -273,7 +273,7 @@ class _StockTabState extends State<_StockTab>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Items checked out onto your ambulance'),
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.success,
         ),
       );
       // Switch to My Stock tab to let the crew see onboard items immediately.
@@ -642,7 +642,7 @@ class _MyStockTabState extends State<_MyStockTab>
           content: Text(
             'Returned $confirmed ${checkout.item.unit} of ${checkout.item.name}',
           ),
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.success,
         ),
       );
       await _load();

@@ -5,7 +5,7 @@ class AppConfig {
   static const String apiUrl = String.fromEnvironment(
     'API_URL',
     // Physical LAN default for this machine. Emulator still needs 10.0.2.2.
-    defaultValue: 'http://192.168.100.184:3000',
+    defaultValue: 'http://192.168.100.92:3000',
   );
 
   static const String _socketUrlOverride = String.fromEnvironment('SOCKET_URL');

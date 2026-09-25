@@ -92,7 +92,7 @@ class _CrewScreenState extends State<CrewScreen> {
           message,
           style: const TextStyle(color: AppColors.onPrimary),
         ),
-        backgroundColor: isError ? AppColors.danger : AppColors.primary,
+        backgroundColor: isError ? AppColors.danger : AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
